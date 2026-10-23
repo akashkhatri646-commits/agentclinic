@@ -10,7 +10,7 @@ Stand up a working Next.js application that any team member can clone, install, 
 |-------------|-------------|--------------------------|
 | Mary (engineering) | Reliable TypeScript stack, popular framework | Next.js 14 + strict TypeScript + Tailwind + Vitest |
 | Mary (engineering) | Dashboard shell ready for Phase 2 | Protected `/dashboard` layout with nav + sidebar placeholders |
-| Steve (marketing) | Attractive site, modern browser, responsive | Public home page with clinic name, tagline, and Sign In CTA; Tailwind responsive at 375 px |
+| Steve (marketing) | Attractive site, modern browser, responsive | Public home page with clinic name, tagline, and Sign In CTA; Tailwind responsive at 375 px (mobile), 768 px (tablet), 1280 px (desktop) |
 | Susan (product) | Role model in place before feature work | `Role` enum (`AGENT`, `STAFF`, `ADMIN`) on `User` model |
 
 ## Key decisions

@@ -33,3 +33,4 @@ AgentClinic is built on a modern, TypeScript-first stack optimised for developer
 - All database access goes through the Prisma client — no raw SQL in components.
 - The SQLite database file (`prisma/dev.db`) is local only and must not be committed to version control.
 - Environment variables follow the `NEXT_PUBLIC_` convention for client-safe values; secrets (e.g. `AUTH_SECRET`) stay server-side only.
+- **Responsive design is required on all pages.** Every page must render correctly at the standard breakpoints: 375 px (mobile), 768 px (tablet), 1280 px (desktop). Use Tailwind's `sm:`, `md:`, and `lg:` prefixes; avoid fixed widths that break at small viewports. No horizontal scroll at any breakpoint.

@@ -26,8 +26,8 @@ export default async function NavBar() {
                 Admin
               </Link>
             )}
-            <span className="text-gray-400">|</span>
-            <span className="text-gray-500">{session.user?.email}</span>
+            <span className="hidden sm:inline text-gray-400">|</span>
+            <span className="hidden sm:inline text-gray-500">{session.user?.email}</span>
             <form action={handleSignOut}>
               <button
                 type="submit"
