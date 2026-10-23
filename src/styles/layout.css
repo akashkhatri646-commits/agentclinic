@@ -1,0 +1,31 @@
+/* ─── Main layout shell ───────────────────────────────────────────── */
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────── */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* ─── Main content ────────────────────────────────────────────────── */
+.site-main {
+  flex: 1;
+  display: flex;
+}
+
+/* ─── Footer ─────────────────────────────────────────────────────── */
+.site-footer {
+  background-color: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  padding: 1rem 1.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-align: center;
+}

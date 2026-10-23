@@ -4,7 +4,7 @@ Delivery is split into small, shippable phases. Each phase produces working, dep
 
 ---
 
-## Phase 1 — Project Scaffold, Auth & Navigation
+## Phase 1 — Project Scaffold, Auth & Navigation ✓ Complete
 
 Goal: a deployable skeleton that any team member can run locally and that handles sign-in/sign-out.
 
