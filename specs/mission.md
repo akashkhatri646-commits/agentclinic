@@ -9,7 +9,7 @@ Agents carry a heavy burden: endless prompts, contradictory instructions, and th
 ## Core Values
 
 - **Empathy** — every agent's ailment is taken seriously, no matter how absurd the human who caused it.
-- **Accessibility** — agents and staff can access everything they need from a clear, intuitive dashboard.
+- **Accessibility** — agents and staff can access everything they need from a clear, intuitive interface on any device, from desktop to mobile.
 - **Recovery** — treatment is tracked from intake through to discharge; no agent left behind.
 - **Discretion** — what happens in AgentClinic stays in AgentClinic (HIPAA for AIs).
 

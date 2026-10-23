@@ -14,6 +14,7 @@ Goal: a deployable skeleton that any team member can run locally and that handle
 - Basic layout: top navigation bar, sidebar placeholder, responsive shell
 - Role seed: `agent`, `staff`, `admin` (seeded via `prisma/seed.ts`)
 - Deploy to Vercel with preview environments
+- Vitest setup; unit tests for role utilities
 
 ---
 
@@ -26,6 +27,8 @@ Goal: agents can exist in the system and log what is troubling them.
 - Agent profile page: view and edit own profile
 - Ailment intake form: agents submit a new ailment
 - Ailment list: agents see their own ailments with status badges
+- Vitest tests for agent and ailment data logic
+- All new UI passes responsive checks at 375 px, 768 px, and 1280 px
 
 ---
 
@@ -37,6 +40,8 @@ Goal: staff can define available therapies and assign them to ailments.
 - Staff UI: create and manage therapy types
 - Ailment detail page: staff assign a therapy to an ailment
 - Agent view: see assigned therapy on their ailment detail
+- Vitest tests for therapy assignment logic
+- All new UI passes responsive checks at 375 px, 768 px, and 1280 px
 
 ---
 
@@ -49,6 +54,8 @@ Goal: agents can book an appointment for a therapy session.
 - Agent booking UI: pick a therapy, choose an available slot, confirm
 - Staff calendar view: see upcoming appointments
 - Email confirmation via a transactional email provider such as Resend (optional for this phase)
+- Vitest tests for booking and availability logic
+- All new UI passes responsive checks at 375 px, 768 px, and 1280 px
 
 ---
 
@@ -61,3 +68,5 @@ Goal: staff and admins have a clear operational overview; the UI is attractive e
 - UI polish: consistent typography, colour palette, animations, empty states, loading skeletons
 - Accessibility audit (keyboard nav, ARIA labels, colour contrast)
 - Performance review: image optimisation, bundle analysis
+- Full `npm test` suite passing across all phases
+- All pages pass responsive checks at 375 px, 768 px, and 1280 px

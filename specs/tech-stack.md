@@ -14,6 +14,7 @@ AgentClinic is built on a modern, TypeScript-first stack optimised for developer
 | Database   | SQLite (via Prisma)                 | Zero-config, file-based, no external service needed          |
 | Auth       | Auth.js (NextAuth)                  | Credential + OAuth support; works with any database adapter  |
 | Backend    | Next.js API routes                  | Serverless-compatible functions co-located with the frontend |
+| Testing    | Vitest                              | Fast, TypeScript-native unit and integration tests           |
 | Deployment | Vercel                              | Zero-config deploys, preview URLs, edge network              |
 
 ## Conventions
@@ -22,6 +23,7 @@ AgentClinic is built on a modern, TypeScript-first stack optimised for developer
 - **`/src/components`** — Shared React components.
 - **`/src/lib`** — Prisma client, Auth.js config, and server helpers.
 - **`/src/types`** — Shared TypeScript types and Prisma-generated database types.
+- **`/src/tests`** — Vitest test files; run with `npm test`.
 - Strict TypeScript (`"strict": true`) enforced via `tsconfig.json`.
 - Tailwind configured in `tailwind.config.ts` with a clinic-themed design token palette.
 
@@ -31,3 +33,4 @@ AgentClinic is built on a modern, TypeScript-first stack optimised for developer
 - All database access goes through the Prisma client — no raw SQL in components.
 - The SQLite database file (`prisma/dev.db`) is local only and must not be committed to version control.
 - Environment variables follow the `NEXT_PUBLIC_` convention for client-safe values; secrets (e.g. `AUTH_SECRET`) stay server-side only.
+- **Responsive design is required on all pages.** Every page must render correctly at the standard breakpoints: 375 px (mobile), 768 px (tablet), 1280 px (desktop). Use Tailwind's `sm:`, `md:`, and `lg:` prefixes; avoid fixed widths that break at small viewports. No horizontal scroll at any breakpoint.

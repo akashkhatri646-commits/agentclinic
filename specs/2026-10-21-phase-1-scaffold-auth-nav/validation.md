@@ -32,10 +32,12 @@ The branch is ready to merge when every item below is checked off. Each check ca
 ## Layout & responsiveness
 
 - [ ] Nav bar renders at full desktop width (1280 px) with no overflow or broken layout
-- [ ] Nav bar and layout render correctly at 375 px mobile width with no horizontal scroll
+- [ ] Nav bar and layout render correctly at 768 px tablet width with no horizontal scroll
+- [ ] Nav bar and layout render correctly at 375 px mobile width with no horizontal scroll; email address is hidden, Sign out button remains visible
 - [ ] Sidebar placeholder is present and does not throw errors (can be empty)
 
 ## Code quality
 
 - [ ] `npx tsc --noEmit` exits with no errors
+- [ ] `npm test` runs and all tests pass with no failures
 - [ ] No `.env.local` or `prisma/dev.db` files appear in `git status`
