@@ -8,7 +8,7 @@ Stand up a working Next.js application that any team member can clone, install, 
 
 | Stakeholder | Requirement | How Phase 1 addresses it |
 |-------------|-------------|--------------------------|
-| Mary (engineering) | Reliable TypeScript stack, popular framework | Next.js 14 + strict TypeScript + Tailwind |
+| Mary (engineering) | Reliable TypeScript stack, popular framework | Next.js 14 + strict TypeScript + Tailwind + Vitest |
 | Mary (engineering) | Dashboard shell ready for Phase 2 | Protected `/dashboard` layout with nav + sidebar placeholders |
 | Steve (marketing) | Attractive site, modern browser, responsive | Public home page with clinic name, tagline, and Sign In CTA; Tailwind responsive at 375 px |
 | Susan (product) | Role model in place before feature work | `Role` enum (`AGENT`, `STAFF`, `ADMIN`) on `User` model |
@@ -26,6 +26,9 @@ Three fixed roles (`AGENT`, `STAFF`, `ADMIN`) are known up front and are unlikel
 
 **`AUTH_SECRET` in `.env.local` only**
 Never committed. `.env.local.example` documents the variable name and format so new contributors know what to create.
+
+**Vitest for unit tests**
+Pure business logic (role checks, utility helpers) is extracted into standalone functions so it can be tested without mocking the database or the framework. Tests live in `src/tests/` and run with `npm test`.
 
 ## Non-goals for this phase
 

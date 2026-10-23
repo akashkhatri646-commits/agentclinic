@@ -14,6 +14,7 @@ AgentClinic is built on a modern, TypeScript-first stack optimised for developer
 | Database   | SQLite (via Prisma)                 | Zero-config, file-based, no external service needed          |
 | Auth       | Auth.js (NextAuth)                  | Credential + OAuth support; works with any database adapter  |
 | Backend    | Next.js API routes                  | Serverless-compatible functions co-located with the frontend |
+| Testing    | Vitest                              | Fast, TypeScript-native unit and integration tests           |
 | Deployment | Vercel                              | Zero-config deploys, preview URLs, edge network              |
 
 ## Conventions
@@ -22,6 +23,7 @@ AgentClinic is built on a modern, TypeScript-first stack optimised for developer
 - **`/src/components`** — Shared React components.
 - **`/src/lib`** — Prisma client, Auth.js config, and server helpers.
 - **`/src/types`** — Shared TypeScript types and Prisma-generated database types.
+- **`/src/tests`** — Vitest test files; run with `npm test`.
 - Strict TypeScript (`"strict": true`) enforced via `tsconfig.json`.
 - Tailwind configured in `tailwind.config.ts` with a clinic-themed design token palette.
 

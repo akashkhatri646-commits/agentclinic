@@ -37,6 +37,14 @@
 3. Update `middleware.ts` to protect only `/dashboard/*`, leaving `/` and `/login` publicly accessible
 4. Apply Tailwind for a clean centred layout that works at both 375 px and 1280 px
 
+## Group 6 — Vitest Setup & Initial Tests
+
+1. Install Vitest and dependencies: `npm install -D vitest @vitejs/plugin-react jsdom`
+2. Create `vitest.config.ts` — configure test environment (`jsdom`), globals, and `@/*` path alias
+3. Extract `src/lib/roles.ts` — pure role-checking helpers (`isAdmin`, `isStaff`) so they can be tested without mocking
+4. Write `src/tests/roles.test.ts` — unit tests for every role helper
+5. Confirm `npm test` passes with no failures
+
 ## Group 5 — Main Layout Component
 
 1. Create `src/styles/layout.css` — layout-specific styles (structural rules that complement Tailwind)

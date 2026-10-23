@@ -38,4 +38,5 @@ The branch is ready to merge when every item below is checked off. Each check ca
 ## Code quality
 
 - [ ] `npx tsc --noEmit` exits with no errors
+- [ ] `npm test` runs and all tests pass with no failures
 - [ ] No `.env.local` or `prisma/dev.db` files appear in `git status`
