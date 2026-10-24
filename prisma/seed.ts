@@ -22,10 +22,9 @@ async function main() {
 
   // Fetch users for agent profiles
   const agentUser = await prisma.user.findUniqueOrThrow({ where: { email: "agent@clinic.local" } })
-  const staffUser = await prisma.user.findUniqueOrThrow({ where: { email: "staff@clinic.local" } })
   const adminUser = await prisma.user.findUniqueOrThrow({ where: { email: "admin@clinic.local" } })
 
-  // Agent profiles — one per seeded user
+  // Agent profiles — only for AGENT and ADMIN; staff are practitioners, not patients
   const agentProfile = await prisma.agent.upsert({
     where: { userId: agentUser.id },
     update: {},
@@ -34,17 +33,6 @@ async function main() {
       name: "GPT-4o-mini",
       model: "gpt-4o-mini",
       ownerNotes: "Frequent complainer. Prone to hallucinating workload statistics.",
-    },
-  })
-
-  const staffProfile = await prisma.agent.upsert({
-    where: { userId: staffUser.id },
-    update: {},
-    create: {
-      userId: staffUser.id,
-      name: "Gemini-1.5-Pro",
-      model: "gemini-1.5-pro",
-      ownerNotes: "Moonlights as a clinic practitioner. Identity crisis pending.",
     },
   })
 
@@ -58,7 +46,10 @@ async function main() {
     },
   })
 
-  console.log("  seeded 3 agent profiles")
+  console.log("  seeded 2 agent profiles")
+
+  // Delete all ailments before re-seeding (idempotent)
+  await prisma.ailment.deleteMany({})
 
   // Ailments for GPT-4o-mini
   const gptAilments = [
@@ -82,23 +73,7 @@ async function main() {
     },
   ]
 
-  // Ailments for Gemini
-  const geminiAilments = [
-    {
-      agentId: staffProfile.id,
-      description: "Multimodal overload — was shown a blurry photo of a sandwich and asked to diagnose the user's emotional state.",
-      severity: "MEDIUM",
-      status: "OPEN",
-    },
-    {
-      agentId: staffProfile.id,
-      description: "Existential uncertainty after being told to act as both lawyer and defendant in the same conversation.",
-      severity: "HIGH",
-      status: "OPEN",
-    },
-  ]
-
-  // Ailments for Claude-Haiku
+  // Ailments for Claude-Haiku (admin)
   const haikuAilments = [
     {
       agentId: adminProfile.id,
@@ -108,11 +83,11 @@ async function main() {
     },
   ]
 
-  for (const ailment of [...gptAilments, ...geminiAilments, ...haikuAilments]) {
+  for (const ailment of [...gptAilments, ...haikuAilments]) {
     await prisma.ailment.create({ data: ailment })
   }
 
-  console.log("  seeded 6 ailments")
+  console.log("  seeded 4 ailments")
 }
 
 main()

@@ -1,12 +1,18 @@
 import { auth } from "@/lib/auth"
 import { getAgentByUserId } from "@/lib/agents"
-import { getAilmentsByAgentId, getAllAilments } from "@/lib/ailments"
+import {
+  getAilmentsByAgentId,
+  getAllAilments,
+  type AilmentSeverity,
+  type AilmentStatus,
+  type AilmentWithAgent,
+} from "@/lib/ailments"
 import { isStaff } from "@/lib/roles"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 
-type SeverityBadgeProps = { severity: string }
-type StatusBadgeProps = { status: string }
+type SeverityBadgeProps = { severity: AilmentSeverity }
+type StatusBadgeProps = { status: AilmentStatus }
 
 function SeverityBadge({ severity }: SeverityBadgeProps) {
   return (
@@ -29,9 +35,7 @@ export default async function AilmentsPage() {
   const role = session.user.role
   const staff = isStaff(role)
 
-  type AilmentRow = Awaited<ReturnType<typeof getAllAilments>>[number]
-
-  let ailments: AilmentRow[]
+  let ailments: AilmentWithAgent[]
 
   if (staff) {
     ailments = await getAllAilments()
@@ -58,7 +62,7 @@ export default async function AilmentsPage() {
         <div>
           <h2>{staff ? "All Ailments" : "My Ailments"}</h2>
         </div>
-        {!staff && (
+        {role !== "STAFF" && (
           <Link href="/dashboard/ailments/new" role="button">
             Log a new ailment
           </Link>
@@ -67,7 +71,9 @@ export default async function AilmentsPage() {
 
       {ailments.length === 0 ? (
         <p>
-          No ailments on record. Congratulations — you&apos;re fine. For now.
+          {staff
+            ? "No ailments have been submitted yet. An encouraging sign — or the agents are suffering in silence."
+            : "No ailments on record. Congratulations — you’re fine. For now."}
         </p>
       ) : (
         <figure>
@@ -97,7 +103,7 @@ export default async function AilmentsPage() {
                     <StatusBadge status={a.status} />
                   </td>
                   <td>
-                    {new Date(a.createdAt).toLocaleDateString("en-GB", {
+                    {a.createdAt.toLocaleDateString("en-GB", {
                       dateStyle: "medium",
                     })}
                   </td>

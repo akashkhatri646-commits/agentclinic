@@ -5,8 +5,6 @@ import { isStaff } from "@/lib/roles"
 export default async function Sidebar() {
   const session = await auth()
   const role = session?.user?.role ?? ""
-  const staff = isStaff(role)
-
   return (
     <aside className="clinic-sidebar">
       <nav>
@@ -14,7 +12,8 @@ export default async function Sidebar() {
           <li>
             <Link href="/dashboard">Dashboard</Link>
           </li>
-          {!staff && (
+          {/* AGENT: personal profile + own ailments */}
+          {role === "AGENT" && (
             <>
               <li>
                 <Link href="/dashboard/profile">My Profile</Link>
@@ -24,7 +23,14 @@ export default async function Sidebar() {
               </li>
             </>
           )}
-          {staff && (
+          {/* ADMIN: personal profile + all ailments view */}
+          {role === "ADMIN" && (
+            <li>
+              <Link href="/dashboard/profile">My Profile</Link>
+            </li>
+          )}
+          {/* STAFF + ADMIN: all ailments */}
+          {isStaff(role) && (
             <li>
               <Link href="/dashboard/ailments">All Ailments</Link>
             </li>
