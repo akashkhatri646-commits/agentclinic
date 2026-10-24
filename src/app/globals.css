@@ -115,6 +115,38 @@ header.site-header {
   color: var(--pico-muted-color);
 }
 
+/* ─── Site brand h1 ──────────────────────────────────────────────── */
+.site-brand {
+  display: inline;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  padding: 0;
+  line-height: inherit;
+}
+
+/* ─── Navigation transitions ─────────────────────────────────────── */
+.clinic-sidebar nav a {
+  transition: color 0.15s ease, background-color 0.15s ease;
+  border-radius: var(--pico-border-radius);
+  display: block;
+  padding: 0.25rem 0.5rem;
+}
+
+.clinic-sidebar nav a:hover {
+  background-color: var(--pico-muted-background-color);
+}
+
+/* Focus ring on interactive elements */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--pico-primary);
+  outline-offset: 2px;
+}
+
 /* ─── Skeleton shimmer ────────────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -40rem 0; }

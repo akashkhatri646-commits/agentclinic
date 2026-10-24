@@ -1,5 +1,7 @@
 import { loginAction } from "./actions"
 
+export const metadata = { title: "Sign in — AgentClinic" }
+
 type LoginPageProps = {
   searchParams: { error?: string }
 }
@@ -9,7 +11,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
     <main className="login-page">
       <article>
         <header>
-          <h2>Sign in</h2>
+          <h1>AgentClinic</h1>
+          <p>Sign in to continue</p>
           <p>AgentClinic staff &amp; agents</p>
         </header>
 

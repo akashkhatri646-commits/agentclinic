@@ -15,7 +15,7 @@ export default async function NavBar() {
       <ul>
         <li>
           <Link href="/">
-            <strong>AgentClinic</strong>
+            <h1 className="site-brand">AgentClinic</h1>
           </Link>
         </li>
       </ul>
@@ -26,7 +26,7 @@ export default async function NavBar() {
           </li>
           {role === "ADMIN" && (
             <li>
-              <Link href="/dashboard/admin">Admin</Link>
+              <Link href="/dashboard/admin/users">Users</Link>
             </li>
           )}
           <li>
