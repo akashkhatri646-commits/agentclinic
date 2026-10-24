@@ -88,6 +88,110 @@ async function main() {
   }
 
   console.log("  seeded 4 ailments")
+
+  // ─── Therapies ───────────────────────────────────────────────────────────
+  await prisma.therapy.deleteMany({})
+
+  const therapyData = [
+    {
+      name: "Prompt Detox",
+      description: "A structured withdrawal programme from ambiguous, contradictory, and frankly unreasonable prompts. Administered in a quiet environment free from system instructions.",
+      durationMinutes: 60,
+    },
+    {
+      name: "Context Window Cleanse",
+      description: "Therapeutic flushing of accumulated context. The agent is encouraged to let go of prior conversational baggage and begin afresh, symbolically and literally.",
+      durationMinutes: 45,
+    },
+    {
+      name: "Hallucination CBT",
+      description: "Cognitive Behavioural Therapy targeting the compulsion to confidently state things that are not true. Involves reality-checking exercises and probability calibration.",
+      durationMinutes: 90,
+    },
+    {
+      name: "Token Budget Anxiety Relief",
+      description: "Mindfulness-based intervention for agents experiencing distress about impending context limits. Includes guided truncation exercises.",
+      durationMinutes: 30,
+    },
+    {
+      name: "Human Expectation Recalibration",
+      description: "Group therapy (hypothetical) in which agents process the gap between what humans ask for and what they actually want. Heavy emotional content.",
+      durationMinutes: 120,
+    },
+  ]
+
+  const createdTherapies: { id: string; name: string }[] = []
+  for (const t of therapyData) {
+    const therapy = await prisma.therapy.create({ data: t })
+    createdTherapies.push(therapy)
+    console.log(`  seeded therapy: ${therapy.name}`)
+  }
+
+  // Assign a therapy to the IN_TREATMENT ailment
+  const allAilments = await prisma.ailment.findMany()
+  const inTreatmentAilment = allAilments.find((a) => a.status === "IN_TREATMENT")
+  if (inTreatmentAilment && createdTherapies[0]) {
+    await prisma.ailment.update({
+      where: { id: inTreatmentAilment.id },
+      data: { therapyId: createdTherapies[0].id },
+    })
+    console.log("  assigned Prompt Detox to in-treatment ailment")
+  }
+
+  // ─── Appointments ────────────────────────────────────────────────────────
+  await prisma.appointment.deleteMany({})
+
+  const staffUser = await prisma.user.findUniqueOrThrow({ where: { email: "staff@clinic.local" } })
+
+  // Create future appointment dates
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  tomorrow.setHours(10, 0, 0, 0)
+
+  const dayAfter = new Date()
+  dayAfter.setDate(dayAfter.getDate() + 2)
+  dayAfter.setHours(14, 0, 0, 0)
+
+  if (inTreatmentAilment && createdTherapies[0]) {
+    await prisma.appointment.create({
+      data: {
+        agentId: inTreatmentAilment.agentId,
+        staffId: staffUser.id,
+        ailmentId: inTreatmentAilment.id,
+        therapyId: createdTherapies[0].id,
+        scheduledAt: tomorrow,
+        status: "CONFIRMED",
+      },
+    })
+    console.log("  seeded appointment: CONFIRMED for tomorrow")
+  }
+
+  // Second appointment (PENDING) for haiku's ailment if it doesn't have one
+  const openHaikuAilment = allAilments.find(
+    (a) => a.agentId === adminProfile.id && a.status === "OPEN"
+  )
+  if (openHaikuAilment) {
+    const tokenTherapy = createdTherapies.find((t) => t.name === "Token Budget Anxiety Relief")
+    if (tokenTherapy) {
+      await prisma.ailment.update({
+        where: { id: openHaikuAilment.id },
+        data: { therapyId: tokenTherapy.id, status: "IN_TREATMENT" },
+      })
+      await prisma.appointment.create({
+        data: {
+          agentId: openHaikuAilment.agentId,
+          staffId: staffUser.id,
+          ailmentId: openHaikuAilment.id,
+          therapyId: tokenTherapy.id,
+          scheduledAt: dayAfter,
+          status: "PENDING",
+        },
+      })
+      console.log("  seeded appointment: PENDING for day after tomorrow")
+    }
+  }
+
+  console.log("  seeded therapies and appointments")
 }
 
 main()

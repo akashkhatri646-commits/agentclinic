@@ -10,6 +10,7 @@ import {
 import { isStaff } from "@/lib/roles"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import EmptyState from "@/components/EmptyState"
 
 type SeverityBadgeProps = { severity: AilmentSeverity }
 type StatusBadgeProps = { status: AilmentStatus }
@@ -70,11 +71,15 @@ export default async function AilmentsPage() {
       </header>
 
       {ailments.length === 0 ? (
-        <p>
-          {staff
-            ? "No ailments have been submitted yet. An encouraging sign — or the agents are suffering in silence."
-            : "No ailments on record. Congratulations — you’re fine. For now."}
-        </p>
+        <EmptyState
+          message={
+            staff
+              ? "No ailments have been submitted yet. An encouraging sign — or the agents are suffering in silence."
+              : "No ailments on record. Congratulations — you’re fine. For now."
+          }
+          actionHref={role !== "STAFF" ? "/dashboard/ailments/new" : undefined}
+          actionLabel={role !== "STAFF" ? "Log a new ailment" : undefined}
+        />
       ) : (
         <figure>
           <table>
@@ -85,6 +90,7 @@ export default async function AilmentsPage() {
                 <th>Severity</th>
                 <th>Status</th>
                 <th>Logged</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -106,6 +112,11 @@ export default async function AilmentsPage() {
                     {a.createdAt.toLocaleDateString("en-GB", {
                       dateStyle: "medium",
                     })}
+                  </td>
+                  <td>
+                    <Link href={`/dashboard/ailments/${a.id}`} role="button" className="outline">
+                      View
+                    </Link>
                   </td>
                 </tr>
               ))}

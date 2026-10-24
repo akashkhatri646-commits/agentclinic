@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { prisma } from "@/lib/prisma"
-import { getAilmentsByAgentId, getAllAilments, createAilment } from "@/lib/ailments"
+import { getAilmentsByAgentId, getAllAilments, createAilment, assignTherapy } from "@/lib/ailments"
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     ailment: {
       findMany: vi.fn(),
+      findUnique: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
     },
   },
 }))
@@ -27,7 +29,9 @@ const mockAilment = {
   severity: "HIGH",
   status: "OPEN",
   createdAt: new Date("2026-01-01"),
+  therapyId: null,
   agent: mockAgent,
+  therapy: null,
 }
 
 describe("getAilmentsByAgentId", () => {
@@ -94,7 +98,34 @@ describe("getAllAilments", () => {
     vi.mocked(prisma.ailment.findMany).mockResolvedValue([mockAilment])
     await getAllAilments()
     expect(prisma.ailment.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ include: { agent: true } })
+      expect.objectContaining({ include: expect.objectContaining({ agent: true }) })
     )
+  })
+})
+
+describe("assignTherapy", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it("sets therapyId on the ailment", async () => {
+    vi.mocked(prisma.ailment.update).mockResolvedValue({
+      ...mockAilment,
+      therapyId: "therapy-1",
+      status: "IN_TREATMENT",
+    } as never)
+    await assignTherapy("ailment-1", "therapy-1")
+    expect(prisma.ailment.update).toHaveBeenCalledWith({
+      where: { id: "ailment-1" },
+      data: { therapyId: "therapy-1", status: "IN_TREATMENT" },
+    })
+  })
+
+  it("updates status to IN_TREATMENT", async () => {
+    vi.mocked(prisma.ailment.update).mockResolvedValue({
+      ...mockAilment,
+      therapyId: "therapy-1",
+      status: "IN_TREATMENT",
+    } as never)
+    const result = await assignTherapy("ailment-1", "therapy-1")
+    expect(result.status).toBe("IN_TREATMENT")
   })
 })

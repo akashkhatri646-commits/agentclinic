@@ -8,23 +8,25 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  role         String   @default("AGENT")
-  createdAt    DateTime @default(now())
-  agent        Agent?
+  id                String        @id @default(cuid())
+  email             String        @unique
+  passwordHash      String
+  role              String        @default("AGENT")
+  createdAt         DateTime      @default(now())
+  agent             Agent?
+  staffAppointments Appointment[] @relation("StaffAppointments")
 }
 
 model Agent {
-  id         String    @id @default(cuid())
-  name       String
-  model      String
-  ownerNotes String?
-  createdAt  DateTime  @default(now())
-  userId     String    @unique
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ailments   Ailment[]
+  id           String        @id @default(cuid())
+  name         String
+  model        String
+  ownerNotes   String?
+  createdAt    DateTime      @default(now())
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ailments     Ailment[]
+  appointments Appointment[]
 }
 
 model Ailment {
@@ -35,4 +37,32 @@ model Ailment {
   createdAt   DateTime @default(now())
   agentId     String
   agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  therapyId   String?
+  therapy     Therapy? @relation(fields: [therapyId], references: [id])
+  appointments Appointment[]
+}
+
+model Therapy {
+  id              String   @id @default(cuid())
+  name            String
+  description     String
+  durationMinutes Int
+  createdAt       DateTime @default(now())
+  ailments        Ailment[]
+  appointments    Appointment[]
+}
+
+model Appointment {
+  id          String   @id @default(cuid())
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  staffId     String
+  staff       User     @relation("StaffAppointments", fields: [staffId], references: [id])
+  ailmentId   String
+  ailment     Ailment  @relation(fields: [ailmentId], references: [id], onDelete: Cascade)
+  therapyId   String
+  therapy     Therapy  @relation(fields: [therapyId], references: [id])
+  scheduledAt DateTime
+  status      String   @default("PENDING") // PENDING | CONFIRMED | CANCELLED
+  createdAt   DateTime @default(now())
 }

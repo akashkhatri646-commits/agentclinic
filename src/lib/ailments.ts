@@ -4,9 +4,10 @@ import { Prisma } from "@prisma/client"
 export type AilmentSeverity = "LOW" | "MEDIUM" | "HIGH"
 export type AilmentStatus = "OPEN" | "IN_TREATMENT" | "RESOLVED"
 
-// Narrowed type: severity/status are validated on write so we assert the union here
-type RawAilmentWithAgent = Prisma.AilmentGetPayload<{ include: { agent: true } }>
-export type AilmentWithAgent = Omit<RawAilmentWithAgent, "severity" | "status"> & {
+const ailmentInclude = { agent: true, therapy: true } as const
+
+type RawAilmentFull = Prisma.AilmentGetPayload<{ include: typeof ailmentInclude }>
+export type AilmentWithAgent = Omit<RawAilmentFull, "severity" | "status"> & {
   severity: AilmentSeverity
   status: AilmentStatus
 }
@@ -14,7 +15,7 @@ export type AilmentWithAgent = Omit<RawAilmentWithAgent, "severity" | "status"> 
 export async function getAilmentsByAgentId(agentId: string): Promise<AilmentWithAgent[]> {
   const rows = await prisma.ailment.findMany({
     where: { agentId },
-    include: { agent: true },
+    include: ailmentInclude,
     orderBy: { createdAt: "desc" },
   })
   return rows as AilmentWithAgent[]
@@ -22,10 +23,18 @@ export async function getAilmentsByAgentId(agentId: string): Promise<AilmentWith
 
 export async function getAllAilments(): Promise<AilmentWithAgent[]> {
   const rows = await prisma.ailment.findMany({
-    include: { agent: true },
+    include: ailmentInclude,
     orderBy: { createdAt: "desc" },
   })
   return rows as AilmentWithAgent[]
+}
+
+export async function getAilmentById(id: string): Promise<AilmentWithAgent | null> {
+  const row = await prisma.ailment.findUnique({
+    where: { id },
+    include: ailmentInclude,
+  })
+  return row as AilmentWithAgent | null
 }
 
 export async function createAilment(data: {
@@ -35,5 +44,12 @@ export async function createAilment(data: {
 }) {
   return prisma.ailment.create({
     data: { ...data, status: "OPEN" },
+  })
+}
+
+export async function assignTherapy(ailmentId: string, therapyId: string) {
+  return prisma.ailment.update({
+    where: { id: ailmentId },
+    data: { therapyId, status: "IN_TREATMENT" },
   })
 }
