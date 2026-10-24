@@ -24,3 +24,8 @@ prisma/dev.db-journal
 
 # Office/Word lock files
 ~$*
+# Prisma local database (actual location)
+prisma/prisma/
+
+# TypeScript build info
+*.tsbuildinfo
