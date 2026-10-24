@@ -1,3 +1,62 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* PicoCSS overrides for our layout shell */
+body {
+  display: block;
+}
+
+main.site-main,
+header.site-header {
+  padding: 0;
+}
+
+/* ─── Login ───────────────────────────────────────────────────────── */
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--pico-spacing);
+}
+
+.login-page article {
+  max-width: 24rem;
+  width: 100%;
+}
+
+/* ─── Sidebar ─────────────────────────────────────────────────────── */
+.clinic-sidebar {
+  width: 14rem;
+  flex-shrink: 0;
+  border-right: 1px solid var(--pico-muted-border-color);
+  padding: var(--pico-spacing);
+}
+
+@media (max-width: 767px) {
+  .clinic-sidebar {
+    display: none;
+  }
+}
+
+/* ─── Dashboard content ───────────────────────────────────────────── */
+.dashboard-content {
+  flex: 1;
+  padding: var(--pico-spacing);
+  min-width: 0;
+}
+
+/* ─── Severity & status badges ────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--pico-border-radius);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.badge-low          { background-color: #d1fae5; color: #065f46; }
+.badge-medium       { background-color: #fef3c7; color: #92400e; }
+.badge-high         { background-color: #fee2e2; color: #991b1b; }
+.badge-open         { background-color: #dbeafe; color: #1e40af; }
+.badge-in-treatment { background-color: #fef3c7; color: #92400e; }
+.badge-resolved     { background-color: #d1fae5; color: #065f46; }

@@ -1,8 +1,41 @@
-export default function Sidebar() {
+import Link from "next/link"
+import { auth } from "@/lib/auth"
+import { isStaff } from "@/lib/roles"
+
+export default async function Sidebar() {
+  const session = await auth()
+  const role = session?.user?.role ?? ""
   return (
-    <aside className="hidden w-56 shrink-0 border-r border-gray-200 bg-gray-50 md:block">
-      <nav className="p-4">
-        {/* Navigation links added in Phase 2+ */}
+    <aside className="clinic-sidebar">
+      <nav>
+        <ul>
+          <li>
+            <Link href="/dashboard">Dashboard</Link>
+          </li>
+          {/* AGENT: personal profile + own ailments */}
+          {role === "AGENT" && (
+            <>
+              <li>
+                <Link href="/dashboard/profile">My Profile</Link>
+              </li>
+              <li>
+                <Link href="/dashboard/ailments">My Ailments</Link>
+              </li>
+            </>
+          )}
+          {/* ADMIN: personal profile + all ailments view */}
+          {role === "ADMIN" && (
+            <li>
+              <Link href="/dashboard/profile">My Profile</Link>
+            </li>
+          )}
+          {/* STAFF + ADMIN: all ailments */}
+          {isStaff(role) && (
+            <li>
+              <Link href="/dashboard/ailments">All Ailments</Link>
+            </li>
+          )}
+        </ul>
       </nav>
     </aside>
   )
