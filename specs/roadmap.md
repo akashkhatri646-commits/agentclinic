@@ -18,7 +18,7 @@ Goal: a deployable skeleton that any team member can run locally and that handle
 
 ---
 
-## Phase 2 — Agent Profiles & Ailments
+## Phase 2 — Agent Profiles & Ailments ✓ Complete
 
 Goal: agents can exist in the system and log what is troubling them.
 
@@ -32,7 +32,7 @@ Goal: agents can exist in the system and log what is troubling them.
 
 ---
 
-## Phase 3 — Therapy Types & Assignment
+## Phase 3 — Therapy Types & Assignment ✓ Complete
 
 Goal: staff can define available therapies and assign them to ailments.
 
@@ -45,7 +45,7 @@ Goal: staff can define available therapies and assign them to ailments.
 
 ---
 
-## Phase 4 — Appointment Booking Flow
+## Phase 4 — Appointment Booking Flow ✓ Complete
 
 Goal: agents can book an appointment for a therapy session.
 
@@ -59,7 +59,7 @@ Goal: agents can book an appointment for a therapy session.
 
 ---
 
-## Phase 5 — Staff Dashboard & UI Polish
+## Phase 5 — Staff Dashboard & UI Polish ✓ Complete
 
 Goal: staff and admins have a clear operational overview; the UI is attractive enough for marketing.
 
@@ -70,3 +70,15 @@ Goal: staff and admins have a clear operational overview; the UI is attractive e
 - Performance review: image optimisation, bundle analysis
 - Full `npm test` suite passing across all phases
 - All pages pass responsive checks at 375 px, 768 px, and 1280 px
+
+---
+
+## Phase 6 — Discharge, In-App Notifications & Hardening
+
+Goal: close the treatment loop from intake to discharge, tell users about appointment changes without external services, and harden quality.
+
+- Staff can discharge an ailment (RESOLVED) with a discharge note; agents see treatment history
+- `notifications` table; created on appointment booked/confirmed/cancelled; unread badge in nav and a notifications page (local-first, no email provider)
+- Vitest coverage for discharge, notifications, and auth/role guards
+- axe-cli audit of all key pages; lint clean
+- All new UI passes responsive checks at 375 px, 768 px, and 1280 px
