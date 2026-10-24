@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth"
 import { getAilmentById, assignTherapy, type AilmentSeverity, type AilmentStatus } from "@/lib/ailments"
 import { getAllTherapies } from "@/lib/therapies"
 import { getActiveAppointmentByAilmentId, cancelAppointment } from "@/lib/appointments"
-import { getAllAgents } from "@/lib/agents"
 import { isStaff } from "@/lib/roles"
 import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
@@ -44,13 +43,6 @@ export default async function AilmentDetailPage({ params }: { params: { id: stri
     staff ? getAllTherapies() : Promise.resolve([]),
     getActiveAppointmentByAilmentId(ailment.id),
   ])
-
-  const staffMembers = staff
-    ? []
-    : await (async () => {
-        const agents = await getAllAgents()
-        return agents
-      })()
 
   return (
     <article>
@@ -114,7 +106,7 @@ export default async function AilmentDetailPage({ params }: { params: { id: stri
                   <AppointmentStatusBadge status={activeAppointment.status} />
                 </dd>
               </dl>
-              <CancelAppointmentForm appointmentId={activeAppointment.id} />
+              <CancelAppointmentForm appointmentId={activeAppointment.id} ailmentId={ailment.id} />
             </div>
           ) : ailment.therapy ? (
             <div>
@@ -158,7 +150,7 @@ export default async function AilmentDetailPage({ params }: { params: { id: stri
           </dl>
           <div style={{ display: "flex", gap: "1rem" }}>
             <ConfirmAppointmentForm appointmentId={activeAppointment.id} />
-            <CancelAppointmentForm appointmentId={activeAppointment.id} />
+            <CancelAppointmentForm appointmentId={activeAppointment.id} ailmentId={ailment.id} />
           </div>
         </section>
       )}
@@ -201,11 +193,17 @@ function AssignTherapyForm({
   )
 }
 
-function CancelAppointmentForm({ appointmentId }: { appointmentId: string }) {
+function CancelAppointmentForm({
+  appointmentId,
+  ailmentId,
+}: {
+  appointmentId: string
+  ailmentId: string
+}) {
   async function handleCancel() {
     "use server"
     await cancelAppointment(appointmentId)
-    redirect(".")
+    redirect(`/dashboard/ailments/${ailmentId}`)
   }
   return (
     <form action={handleCancel} style={{ margin: 0 }}>

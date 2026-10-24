@@ -134,12 +134,16 @@ function BookSlotForm({
     if (!scheduledAtRaw) redirect(`/dashboard/ailments/${ailmentId}/book`)
 
     const scheduledAt = new Date(scheduledAtRaw)
+    let bookingError: string | null = null
     try {
       await createAppointment({ agentId, staffId, ailmentId, therapyId, scheduledAt })
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Booking failed."
+      bookingError = e instanceof Error ? e.message : "Booking failed."
+    }
+
+    if (bookingError) {
       redirect(
-        `/dashboard/ailments/${ailmentId}/book?staffId=${staffId}&error=${encodeURIComponent(msg)}`
+        `/dashboard/ailments/${ailmentId}/book?staffId=${staffId}&error=${encodeURIComponent(bookingError)}`
       )
     }
     redirect(`/dashboard/ailments/${ailmentId}`)
