@@ -1,57 +1,48 @@
 import { loginAction } from "./actions"
 
-export default function LoginPage({
-  searchParams,
-}: {
+type LoginPageProps = {
   searchParams: { error?: string }
-}) {
+}
+
+export default function LoginPage({ searchParams }: LoginPageProps) {
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-gray-900">Sign in</h1>
-        <p className="mt-1 text-sm text-gray-500">AgentClinic staff &amp; agents</p>
+    <main className="login-page">
+      <article>
+        <header>
+          <h2>Sign in</h2>
+          <p>AgentClinic staff &amp; agents</p>
+        </header>
 
         {searchParams.error && (
-          <p className="mt-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-            Invalid email or password.
+          <p>
+            <small>Invalid email or password.</small>
           </p>
         )}
 
-        <form action={loginAction} className="mt-6 space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
+        <form action={loginAction}>
+          <label>
+            Email
             <input
-              id="email"
               name="email"
               type="email"
               required
               autoComplete="email"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              aria-invalid={searchParams.error ? true : undefined}
             />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
+          </label>
+          <label>
+            Password
             <input
-              id="password"
               name="password"
               type="password"
               required
               autoComplete="current-password"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              aria-invalid={searchParams.error ? true : undefined}
             />
-          </div>
-          <button
-            type="submit"
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
-          >
-            Sign in
-          </button>
+          </label>
+          <button type="submit">Sign in</button>
         </form>
-      </div>
+      </article>
     </main>
   )
 }

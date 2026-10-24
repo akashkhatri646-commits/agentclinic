@@ -13,4 +13,26 @@ model User {
   passwordHash String
   role         String   @default("AGENT")
   createdAt    DateTime @default(now())
+  agent        Agent?
+}
+
+model Agent {
+  id         String    @id @default(cuid())
+  name       String
+  model      String
+  ownerNotes String?
+  createdAt  DateTime  @default(now())
+  userId     String    @unique
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ailments   Ailment[]
+}
+
+model Ailment {
+  id          String   @id @default(cuid())
+  description String
+  severity    String   // LOW | MEDIUM | HIGH
+  status      String   @default("OPEN") // OPEN | IN_TREATMENT | RESOLVED
+  createdAt   DateTime @default(now())
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
 }

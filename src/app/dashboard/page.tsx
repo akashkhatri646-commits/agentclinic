@@ -4,13 +4,15 @@ export default async function DashboardPage() {
   const session = await auth()
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-      <p className="mt-2 text-sm text-gray-600">
-        Signed in as <span className="font-medium">{session?.user?.email}</span>
+    <article>
+      <header>
+        <h2>Dashboard</h2>
+      </header>
+      <p>
+        Signed in as <strong>{session?.user?.email}</strong>
         {" · "}
-        <span className="capitalize lowercase">{session?.user?.role}</span>
+        <span>{session?.user?.role}</span>
       </p>
-    </div>
+    </article>
   )
 }
