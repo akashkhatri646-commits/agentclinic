@@ -44,6 +44,19 @@ export async function getUnreadCount(userId: string): Promise<number> {
   return prisma.notification.count({ where: { userId, readAt: null } })
 }
 
+/**
+ * For chrome shown on every page (the nav badge): a failed count must degrade
+ * to "no badge" rather than take every page down with it.
+ */
+export async function getUnreadCountSafe(userId: string): Promise<number> {
+  try {
+    return await getUnreadCount(userId)
+  } catch (e) {
+    console.error("Failed to load unread notification count", e)
+    return 0
+  }
+}
+
 /** Marks one notification read. Only affects rows owned by `userId`; returns true if one changed. */
 export async function markAsRead(id: string, userId: string): Promise<boolean> {
   const result = await prisma.notification.updateMany({

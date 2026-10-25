@@ -81,8 +81,9 @@ export async function dischargeAilment(ailmentId: string, note: string) {
     prisma.appointment.updateMany({
       where: {
         ailmentId,
+        // Every active appointment, including past-dated ones never closed out:
+        // a stale PENDING/CONFIRMED row would otherwise block rebooking after a reopen.
         status: { in: ["PENDING", "CONFIRMED"] },
-        scheduledAt: { gte: now },
       },
       data: { status: "CANCELLED" },
     }),

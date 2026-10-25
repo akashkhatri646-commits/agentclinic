@@ -5,6 +5,7 @@ import {
   notifyUsers,
   getNotificationsForUser,
   getUnreadCount,
+  getUnreadCountSafe,
   markAsRead,
   markAllAsRead,
 } from "@/lib/notifications"
@@ -68,6 +69,22 @@ describe("reading notifications", () => {
     expect(prisma.notification.count).toHaveBeenCalledWith({
       where: { userId: "u1", readAt: null },
     })
+  })
+})
+
+describe("getUnreadCountSafe", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it("returns the count when the query succeeds", async () => {
+    vi.mocked(prisma.notification.count).mockResolvedValue(5)
+    expect(await getUnreadCountSafe("u1")).toBe(5)
+  })
+
+  it("returns 0 instead of throwing when the query fails", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.mocked(prisma.notification.count).mockRejectedValue(new Error("no such table"))
+    await expect(getUnreadCountSafe("u1")).resolves.toBe(0)
+    spy.mockRestore()
   })
 })
 

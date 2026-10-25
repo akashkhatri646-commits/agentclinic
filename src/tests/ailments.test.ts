@@ -170,14 +170,13 @@ describe("dischargeAilment", () => {
     })
   })
 
-  it("cancels pending and confirmed future appointments for the ailment", async () => {
+  it("cancels every pending and confirmed appointment, including past-dated ones", async () => {
     vi.mocked(prisma.ailment.findUnique).mockResolvedValue(inTreatment as never)
     await dischargeAilment("ailment-1", "Done.")
     expect(prisma.appointment.updateMany).toHaveBeenCalledWith({
       where: {
         ailmentId: "ailment-1",
         status: { in: ["PENDING", "CONFIRMED"] },
-        scheduledAt: { gte: expect.any(Date) },
       },
       data: { status: "CANCELLED" },
     })

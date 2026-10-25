@@ -1,11 +1,11 @@
 import Link from "next/link"
 import { auth, signOut } from "@/lib/auth"
-import { getUnreadCount } from "@/lib/notifications"
+import { getUnreadCountSafe } from "@/lib/notifications"
 
 export default async function NavBar() {
   const session = await auth()
   const role = session?.user?.role
-  const unread = session?.user?.id ? await getUnreadCount(session.user.id) : 0
+  const unread = session?.user?.id ? await getUnreadCountSafe(session.user.id) : 0
 
   async function handleSignOut() {
     "use server"
