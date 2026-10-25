@@ -16,6 +16,7 @@ model User {
   agent             Agent?
   staffAppointments Appointment[] @relation("StaffAppointments")
   notifications     Notification[]
+  ownedFixes        Fix[]         @relation("FixOwner")
 }
 
 model Agent {
@@ -125,4 +126,68 @@ model EvalResult {
   judgeNote        String?
 
   @@index([runId])
+}
+
+// A group of failing scenarios that share a theme: one weakness a fix can target.
+// Created and updated automatically after each eval run (see src/lib/evals/triage-sync.ts).
+model FailureMode {
+  id                   String    @id @default(cuid())
+  specialistId         String
+  theme                String
+  status               String    @default("OPEN") // OPEN | RESOLVED
+  frequency            Int // scenarios of this theme failing in the specialist's current state
+  totalScenarios       Int // scenarios of this theme in the golden set
+  failingScenarioIds   String    @default("[]") // JSON list of scenario ids (SQLite has no list column)
+  regressedScenarioIds String    @default("[]") // JSON list: passed in the previous version, fail now
+  suggestedSeverity    Int       @default(1) // 1 to 3, from the failing scenarios
+  severityOverride     Int? // 1 to 3, set by staff; empty means use the suggestion
+  effort               Int       @default(2) // 1 (S) to 3 (L), set by staff
+  lastRunId            String?
+  lastRunVersion       String? // the version of the run that last updated this mode's state
+  firstSeenAt          DateTime
+  resolvedAt           DateTime?
+  reappeared           Boolean   @default(false) // resolved, then failed again
+  reappearedAt         DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  fixes                Fix[]
+
+  @@unique([specialistId, theme])
+}
+
+model Fix {
+  id              String      @id @default(cuid())
+  failureModeId   String
+  failureMode     FailureMode @relation(fields: [failureModeId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  ownerId         String?
+  owner           User?       @relation("FixOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  status          String      @default("PROPOSED") // PROPOSED | IN_PROGRESS | SHIPPED | VERIFIED
+  shippedVersion  String?
+  shippedAt       DateTime?
+  verifiedAt      DateTime? // the finish time of the run that verified it
+  verifiedByRunId String?
+  createdById     String? // the user who created it; kept as plain text so history survives a deleted user
+  isSample        Boolean     @default(false) // illustrative seed data
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  events          FixEvent[]
+
+  @@index([failureModeId])
+}
+
+// History of a fix: who did what, and when.
+model FixEvent {
+  id         String   @id @default(cuid())
+  fixId      String
+  fix        Fix      @relation(fields: [fixId], references: [id], onDelete: Cascade)
+  at         DateTime @default(now())
+  actorId    String? // empty when the system acted (for example automatic verification)
+  kind       String // CREATED | STATUS | OWNER | VERIFIED
+  fromStatus String?
+  toStatus   String?
+  note       String?
+
+  @@index([fixId, at])
 }
