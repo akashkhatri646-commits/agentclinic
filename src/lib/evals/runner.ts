@@ -3,10 +3,11 @@ import { runChecks } from "./checks"
 import { getScenarios } from "./scenarios/intake-triage"
 import { getSpecialistVersion } from "./specialists"
 import type { FailureCategory, Judge, Scenario } from "./types"
+import { syncFailureModes, type TriageDb } from "./triage-sync"
 import { JUDGE_PASS_SCORE, computeVerdict, judgeCoverage } from "./verdict"
 
 /** The slice of the database client the runner needs, so a seed script or test can supply its own. */
-export type EvalDb = Pick<PrismaClient, "therapy" | "evalRun">
+export type EvalDb = Pick<PrismaClient, "therapy" | "evalRun"> & TriageDb
 
 export type RunEvalOptions = {
   specialistId: string
@@ -138,7 +139,7 @@ export async function runEval(options: RunEvalOptions) {
   // "Verdict produced": taken after the judge (if any) has finished.
   const finishedAt = timing?.finishedAt ?? new Date()
 
-  return db.evalRun.create({
+  const created = await db.evalRun.create({
     data: {
       specialistId,
       version,
@@ -160,4 +161,15 @@ export async function runEval(options: RunEvalOptions) {
     },
     include: { results: true },
   })
+
+  // Bring the triage backlog up to date. This is bookkeeping around the run, so a
+  // problem here is logged and never fails the run (the rule used for notifications
+  // and the judge). Sync only looks at the state and this run, so the next run catches up.
+  try {
+    await syncFailureModes(created, db)
+  } catch (e) {
+    console.error("Failed to update the triage backlog after an eval run", e)
+  }
+
+  return created
 }

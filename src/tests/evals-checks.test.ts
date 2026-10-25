@@ -6,6 +6,7 @@ import type { Scenario, SpecialistOutput } from "../lib/evals/types"
 const scenario: Scenario = {
   id: "t1",
   split: "DEV",
+  theme: "token-anxiety",
   description: "anything",
   expectedSeverity: "HIGH",
   expectedTherapy: THERAPY.TOKEN_BUDGET_RELIEF,

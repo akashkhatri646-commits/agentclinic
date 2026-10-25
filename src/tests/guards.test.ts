@@ -8,6 +8,8 @@ import {
   canCancelAppointment,
   canViewEvals,
   canRunEvals,
+  canViewTriage,
+  canManageTriage,
 } from "@/lib/guards"
 
 describe("staff-only guards", () => {
@@ -78,5 +80,19 @@ describe("eval guards", () => {
   ])("role %j -> view/run evals = %s", (role, expected) => {
     expect(canViewEvals(role)).toBe(expected)
     expect(canRunEvals(role)).toBe(expected)
+  })
+})
+
+describe("triage guards", () => {
+  it.each([
+    ["STAFF", true],
+    ["ADMIN", true],
+    ["AGENT", false],
+    ["", false],
+    ["staff", false],
+    ["SUPERUSER", false],
+  ])("role %j -> view/manage triage = %s", (role, expected) => {
+    expect(canViewTriage(role)).toBe(expected)
+    expect(canManageTriage(role)).toBe(expected)
   })
 })

@@ -42,3 +42,8 @@ export function canCancelAppointment(
 export const canViewEvals = (role: string): boolean => isStaff(role)
 
 export const canRunEvals = (role: string): boolean => isStaff(role)
+
+/** The triage backlog and fixes are for staff and admin only; agents never see them. */
+export const canViewTriage = (role: string): boolean => isStaff(role)
+
+export const canManageTriage = (role: string): boolean => isStaff(role)

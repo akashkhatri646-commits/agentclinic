@@ -57,6 +57,26 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 - The manual flows in `specs/2026-10-25-phase-8-loop-time-metrics/validation.md` were checked over HTTP and in headless Chrome, not by hand in a browser.
 - The chart was checked in headless Chrome screenshots and by the axe audit, not with a screen reader.
 
+## Phase 9 (failure triage)
+
+| Area | Issue | Impact | Suggested fix |
+|---|---|---|---|
+| Themes | Each scenario's theme is authored judgement, one theme per scenario, with no way to edit them in the app | A mis-tagged scenario puts a failure in the wrong failure mode, and adding a scenario or theme is a code change | Review the tagging in the diff; move scenarios and themes into data with an editor (Phase 10) |
+| Seeded fixes | The seeded fix titles, owners and dates are invented (flagged sample) and send no notifications | A fresh install cannot show a notification arriving from the seed | Create a real fix to see notifications; real fixes notify as designed |
+| Reappearance | Cannot happen from specialist changes alone with two versions; it needs an environment change (for example a missing therapy) or a third version | The flag is only visible after a deliberate trigger | Documented trigger in the README; add a third specialist version |
+| Sync failure | If the sync fails after a run, the backlog is stale until the next run; there is no rebuild-from-runs tool | A transient error leaves the backlog behind | Add a "re-sync" action, or run the sync again from the CLI |
+| Concurrency | Two runs finishing at once could race on the same failure mode | Possible lost update on a local app; the unique key keeps rows consistent | Serialise the sync, or make updates conditional |
+| Score inputs | Changing severity or effort is not recorded in a history, only fix changes are | No audit trail for why a ranking changed | Add a small history for failure-mode input changes |
+| Fixes | A fix belongs to one failure mode and cannot be edited, deleted or moved | A typo in a title stays; a fix that covers two modes needs two records | Add edit and delete, and let a fix cover several modes |
+| Verification | A fix is verified only when every scenario of its failure mode passes, with no partial credit | A mode with one stubborn scenario holds back every fix to it | Show per-scenario progress, or allow splitting a mode |
+| Single specialist | Triage is built for the intake-triage specialist only | Not yet usable for another specialist | Generalise with bring-your-own specialists (Phase 10) |
+| Actions on the wrong page | Posting a triage action to a page that does not host it returns a 500 for any role | Harmless (nothing changes) and only reachable by hand-crafted requests | Accept, or handle the unknown-action case |
+
+### Not verified in Phase 9
+
+- The manual flows in `specs/2026-10-26-phase-9-failure-triage/validation.md` were exercised over HTTP and in headless Chrome, not by hand in a browser, and the pages were not tested with a screen reader.
+- The reappearance flow was checked by deleting the therapy directly in the database, not through the Therapies page.
+
 ## Design notes
 
 - Discharging an `OPEN` ailment with no therapy is allowed (the Phase 6 plan permits it). The agent's notification then points to a history that only shows intake and discharge.

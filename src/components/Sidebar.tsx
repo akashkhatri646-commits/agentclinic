@@ -66,6 +66,9 @@ export default async function Sidebar() {
               <li>
                 <Link href="/dashboard/metrics">Metrics</Link>
               </li>
+              <li>
+                <Link href="/dashboard/triage">Triage</Link>
+              </li>
             </>
           )}
 

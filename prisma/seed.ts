@@ -1,10 +1,53 @@
 import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 import { runEval } from "../src/lib/evals/runner"
+import { SAMPLE_FIXES } from "../src/lib/evals/sample-fixes"
 import { SAMPLE_TIMING } from "../src/lib/evals/sample-data"
 import { INTAKE_TRIAGE_ID, listVersions } from "../src/lib/evals/specialists"
+import { changeFixStatus, createFix } from "../src/lib/evals/triage-fixes"
 
 const prisma = new PrismaClient()
+
+/**
+ * Creates the illustrative fixes (see src/lib/evals/sample-fixes.ts) that come after a given run,
+ * using the real fix services with backdated times. All are flagged as sample data.
+ */
+async function createSampleFixes(afterRun: string) {
+  for (const sample of SAMPLE_FIXES.filter((f) => f.afterRun === afterRun)) {
+    const mode = await prisma.failureMode.findUnique({
+      where: { specialistId_theme: { specialistId: INTAKE_TRIAGE_ID, theme: sample.theme } },
+    })
+    const owner = await prisma.user.findUnique({ where: { email: sample.ownerEmail } })
+    const admin = await prisma.user.findUnique({ where: { email: "admin@clinic.local" } })
+    if (!mode || !owner || !admin) throw new Error(`Cannot seed the sample fix "${sample.title}": missing mode or user`)
+
+    const created = await createFix(
+      {
+        failureModeId: mode.id,
+        title: sample.title,
+        description: sample.description,
+        ownerId: owner.id,
+        actorId: admin.id,
+        at: sample.createdAt,
+        isSample: true,
+      },
+      prisma
+    )
+    if (!created.ok) throw new Error(`Sample fix "${sample.title}" refused: ${created.code}`)
+
+    if (sample.startedAt) {
+      const r = await changeFixStatus({ fixId: created.value.id, to: "IN_PROGRESS", actorId: owner.id, at: sample.startedAt }, prisma)
+      if (!r.ok) throw new Error(`Sample fix "${sample.title}" could not start: ${r.code}`)
+    }
+    if (sample.shippedAt && sample.shippedVersion) {
+      const r = await changeFixStatus(
+        { fixId: created.value.id, to: "SHIPPED", shippedVersion: sample.shippedVersion, actorId: owner.id, at: sample.shippedAt },
+        prisma
+      )
+      if (!r.ok) throw new Error(`Sample fix "${sample.title}" could not ship: ${r.code}`)
+    }
+  }
+}
 
 async function main() {
   const users = [
@@ -234,6 +277,9 @@ async function main() {
   // metrics pages are not empty on a fresh install. Runs v1 then v2, in release order.
   // The scenario results are real; the TIMESTAMPS come from SAMPLE_TIMING, which is
   // illustrative (see src/lib/evals/sample-data.ts), so those runs are flagged isSample.
+  // Triage data is derived from the runs, so it is cleared first; deleting a failure mode
+  // deletes its fixes and their history with it.
+  await prisma.failureMode.deleteMany({})
   await prisma.evalRun.deleteMany({})
   for (const { version } of listVersions(INTAKE_TRIAGE_ID)) {
     const timing = SAMPLE_TIMING[version]
@@ -245,7 +291,17 @@ async function main() {
       ...(timing ? { timing, isSample: true } : {}),
     })
     console.log(`  seeded eval run: ${INTAKE_TRIAGE_ID} ${version} ${run.verdict}${timing ? " (sample timing)" : ""}`)
+
+    // The run has just opened, refreshed or resolved the failure modes. Now add the
+    // illustrative fixes that belong after it. Fixes shipped in v2 are created after the
+    // v1 run, so the v2 run that follows verifies them through the real sync.
+    await createSampleFixes(version)
   }
+
+  const modes = await prisma.failureMode.findMany({ include: { fixes: true } })
+  const open = modes.filter((m) => m.status === "OPEN").length
+  const verified = modes.flatMap((m) => m.fixes).filter((f) => f.status === "VERIFIED").length
+  console.log(`  seeded triage: ${modes.length} failure modes (${open} open), ${verified} fixes verified by the v2 run`)
 
 }
 

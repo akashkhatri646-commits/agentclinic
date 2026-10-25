@@ -13,6 +13,8 @@
 // Environment:
 //   AUDIT_BASE  base URL (default http://localhost:3100)
 //   AUDIT_OUT   folder for screenshots (default <tmp>/agentclinic-audit)
+//   AUDIT_ONLY  only audit pages under this path prefix, e.g. /dashboard/triage (lighter on memory).
+//               On Git Bash, prefix the command with MSYS_NO_PATHCONV=1 or the value is rewritten.
 //
 // Needs Chrome and the selenium-webdriver, chromedriver and axe-core packages that
 // the axe-cli dev dependency brings in. Exits 1 if any check fails.
@@ -27,6 +29,7 @@ const axeSource = fs.readFileSync(require.resolve("axe-core/axe.min.js"), "utf8"
 
 const BASE = process.env.AUDIT_BASE || "http://localhost:3100"
 const OUT = process.env.AUDIT_OUT || path.join(os.tmpdir(), "agentclinic-audit")
+const ONLY = process.env.AUDIT_ONLY || ""
 const WIDTHS = [375, 768, 1280]
 const PASSWORD = "password123" // demo password set by prisma/seed.ts
 
@@ -35,7 +38,7 @@ const ROLES = {
     email: "agent@clinic.local",
     pages: ["/dashboard/ailments", "/dashboard/ailments/new", "/dashboard/notifications", "/dashboard/profile"],
     detailLists: ["/dashboard/ailments"],
-    forbidden: ["/dashboard/evals", "/dashboard/metrics"],
+    forbidden: ["/dashboard/evals", "/dashboard/metrics", "/dashboard/triage"],
   },
   staff: {
     email: "staff@clinic.local",
@@ -47,24 +50,25 @@ const ROLES = {
       "/dashboard/notifications",
       "/dashboard/evals",
       "/dashboard/metrics",
+      "/dashboard/triage",
     ],
-    detailLists: ["/dashboard/ailments", "/dashboard/evals"],
+    detailLists: ["/dashboard/ailments", "/dashboard/evals", "/dashboard/triage"],
     forbidden: [],
   },
   admin: {
     email: "admin@clinic.local",
-    pages: ["/dashboard", "/dashboard/admin/users", "/dashboard/notifications", "/dashboard/evals", "/dashboard/metrics"],
-    detailLists: ["/dashboard/evals"],
+    pages: ["/dashboard", "/dashboard/admin/users", "/dashboard/notifications", "/dashboard/evals", "/dashboard/metrics", "/dashboard/triage"],
+    detailLists: ["/dashboard/evals", "/dashboard/triage"],
     forbidden: [],
   },
 }
 
 // Where a role that is turned away from a page should end up, and text that only eval pages contain.
 const ALLOWED_LANDING = ["/dashboard", "/dashboard/ailments"]
-const EVAL_CONTENT = ["Run an eval", "Eval Verdict", "golden scenarios", "Median loop time", "Quality across versions", "Regressions detected"]
+const EVAL_CONTENT = ["Run an eval", "Eval Verdict", "golden scenarios", "Median loop time", "Quality across versions", "Regressions detected", "Fix backlog", "Open failure modes"]
 
 // Links on a list page that point at a detail page: an id segment of 20+ lowercase letters and digits.
-const DETAIL_LINK = /\/dashboard\/(ailments|evals)\/[a-z0-9]{20,}$/
+const DETAIL_LINK = /\/dashboard\/(ailments|evals|triage)\/[a-z0-9]{20,}$/
 
 async function signIn(driver, email) {
   await driver.get(BASE + "/login")
@@ -114,7 +118,10 @@ async function main() {
         const viewport = await driver.executeScript("return window.innerWidth")
         if (viewport !== width) throw new Error(`viewport is ${viewport}px, expected ${width}px`)
 
-        const pages = [...cfg.pages, ...(await collectDetailPages(driver, cfg.detailLists))]
+        const everyPage = [...cfg.pages, ...(await collectDetailPages(driver, cfg.detailLists))]
+        // AUDIT_ONLY limits the run to pages under a path prefix, which uses far less memory
+        // than a full run (for example AUDIT_ONLY=/dashboard/triage after a change to those pages).
+        const pages = ONLY ? everyPage.filter((p) => p.startsWith(ONLY)) : everyPage
         for (const page of pages) {
           await driver.get(BASE + page)
           await driver.sleep(400)
@@ -154,6 +161,15 @@ async function main() {
         await driver.quit()
       }
     }
+  }
+
+  // An audit that checked nothing must not look like a pass (a mistyped AUDIT_ONLY, or the
+  // sign-in landing somewhere unexpected, would otherwise end with "0 failing").
+  if (results.length === 0) {
+    console.error(
+      `No pages were checked${ONLY ? ` (AUDIT_ONLY was ${JSON.stringify(ONLY)}; on Git Bash set MSYS_NO_PATHCONV=1 so "/dashboard/..." is not rewritten into a Windows path)` : ""}. This is a failure, not a pass.`
+    )
+    process.exit(1)
   }
 
   let failing = 0
