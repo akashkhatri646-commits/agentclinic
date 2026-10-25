@@ -21,5 +21,11 @@ Agents carry a heavy burden: endless prompts, contradictory instructions, and th
 
 ## Target Audience
 
+- **Specialist product teams** — PMs and engineers who want to run a fast, self-serve improvement loop on an AI Specialist and see a clear quality verdict.
+- **Business unit and program leads** — Stakeholders who supply realistic environments and need evidence a specialist works where it will run.
 - **Course students** — Learners studying spec-driven development with AI coding agents, using AgentClinic as a worked reference project.
 - **Conference demo developers** — Developers showcasing AI coding agents at booth demos, where AgentClinic provides a realistic, self-contained app to build against.
+
+## Product Direction
+
+Beyond the clinic app itself, AgentClinic demonstrates self-serve hill climbing for AI Specialists: the clinic is the environment under test, and later phases add evals, failure triage, loop-time metrics, and onboarding. See `specs/strategy.md`.

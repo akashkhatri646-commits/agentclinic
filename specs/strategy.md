@@ -68,11 +68,11 @@ Targets are placeholders to be calibrated against a measured baseline in the pil
 | 1–5 | Clinic app: auth, agents, ailments, therapies, booking, dashboard | Complete | Builds the realistic environment under test |
 | 6 | Discharge, notifications, hardening | In spec | Closes the intake→discharge loop; it is the "fix verified" state later phases reuse |
 | 7 | **Eval harness**: golden scenarios, runner, deterministic + LLM-judge checks, quality verdict | Planned | Without a trustworthy verdict nothing else matters |
-| 9 | **Loop-time and quality metrics**: change→verdict timing, pass rate per version, regression flags | Planned | Makes the north star measurable early, so progress is provable |
-| 8 | **Failure triage**: cluster failures, score by frequency × severity × effort, ranked fix backlog | Planned | Turns verdicts into action |
+| 8 | **Loop-time and quality metrics**: change→verdict timing, pass rate per version, regression flags | Planned | Makes the north star measurable early, so progress is provable |
+| 9 | **Failure triage**: cluster failures, score by frequency × severity × effort, ranked fix backlog | Planned | Turns verdicts into action |
 | 10 | **Self-serve onboarding**: bring-your-own-specialist config, default eval templates, guided setup, playbook | Planned | Last, because defaults should come from patterns learned in 7–9 |
 
-Phase 9 is sequenced before 8 on purpose. A measured baseline is the cheapest high-signal evidence, and triage design benefits from real verdict data.
+Phase 8 (metrics) is sequenced before Phase 9 (triage) on purpose. A measured baseline is the cheapest high-signal evidence, and triage design benefits from real verdict data.
 
 ### Scale path
 

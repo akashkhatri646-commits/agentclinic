@@ -82,3 +82,58 @@ Goal: close the treatment loop from intake to discharge, tell users about appoin
 - Vitest coverage for discharge, notifications, and auth/role guards
 - axe-cli audit of all key pages; lint clean
 - All new UI passes responsive checks at 375 px, 768 px, and 1280 px
+
+
+---
+
+## Phase 7 — Eval Harness & Quality Verdicts
+
+Goal: run a defined AI Specialist against golden scenarios in the clinic environment and get a trustworthy, actionable quality verdict.
+
+- Define a small demo AI Specialist (e.g. ailment intake triage) with a versioned config
+- Golden scenario set (inputs, expected outcomes) stored in the repo, with a hold-out subset
+- Runner that executes scenarios against the clinic app and records results per specialist version
+- Deterministic checks plus an optional LLM-judge check; each failure carries a reason
+- Verdict summary page: pass rate, failures by category, and comparison to the previous version
+- Vitest coverage for the runner, checks, and verdict logic
+- All new UI passes responsive checks at 375 px, 768 px, and 1280 px
+
+---
+
+## Phase 8 — Loop-Time & Quality Metrics
+
+Goal: make the north-star metric (change → verdict loop time) measurable, with a visible baseline.
+
+- Record timestamps for change shipped, eval run started, and verdict produced
+- Metrics dashboard: median loop time, pass rate per version, regressions caught, fixes shipped
+- Hill-climbing chart: quality across specialist versions over time
+- Seeded baseline data so the chart is meaningful in a fresh install
+- Vitest coverage for metric calculations
+- All new UI passes responsive checks at 375 px, 768 px, and 1280 px
+
+---
+
+## Phase 9 — Failure Triage & Prioritized Fixes
+
+Goal: turn eval failures into a ranked fix backlog and track each fix through to verification.
+
+- Group failures into failure modes (reusing the ailment model: a failure mode is an ailment of the specialist)
+- Priority score from frequency × severity ÷ effort, with the inputs visible and editable
+- Fix backlog page; staff link a fix (therapy) to a failure mode and an owner
+- Fix lifecycle: proposed → in progress → shipped → verified by re-run (discharge)
+- Regression flag when a discharged failure mode reappears
+- Vitest coverage for grouping, scoring, and lifecycle transitions
+
+---
+
+## Phase 10 — Self-Serve Onboarding & Customer Instances
+
+Goal: a new team can bring its own specialist and run the loop without help from the core team.
+
+- Bring-your-own-specialist config (file or form): name, version, scenarios, checks
+- Default scenario and check templates; guided first-run flow
+- Multiple seeded environment configurations ("customer instances") selectable at run time
+- Playbook doc: how to run the loop, read a verdict, and triage failures
+- Onboarding completion tracked as a metric (teams running unassisted)
+- Vitest coverage for config validation and instance selection
+- All new UI passes responsive checks at 375 px, 768 px, and 1280 px
