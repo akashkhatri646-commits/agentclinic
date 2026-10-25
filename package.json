@@ -30,6 +30,8 @@
     "@vitejs/plugin-react": "^6.1.2",
     "autoprefixer": "^10.6.1",
     "axe-cli": "^3.2.1",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.35",
     "jsdom": "^30.1.3",
     "postcss": "^8.5.31",
     "prisma": "^5.22.0",

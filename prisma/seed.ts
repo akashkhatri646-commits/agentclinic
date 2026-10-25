@@ -70,6 +70,9 @@ async function main() {
       description: "Mild confusion following a request to 'be more creative' and 'stick strictly to the facts' in the same sentence.",
       severity: "LOW",
       status: "RESOLVED",
+      dischargedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      dischargeNote:
+        "Presented with conflicting creative and factual directives. Taught to ask the human which one wins. Responding well.",
     },
   ]
 
@@ -192,6 +195,36 @@ async function main() {
   }
 
   console.log("  seeded therapies and appointments")
+
+  // ─── Notifications ───────────────────────────────────────────────────────
+  await prisma.notification.deleteMany({})
+
+  const inTreatmentHref = inTreatmentAilment ? `/dashboard/ailments/${inTreatmentAilment.id}` : undefined
+  await prisma.notification.createMany({
+    data: [
+      {
+        userId: agentUser.id,
+        message: "Your appointment for tomorrow at 10:00 has been confirmed.",
+        href: inTreatmentHref,
+      },
+      {
+        userId: agentUser.id,
+        message: "You have been discharged. Review your treatment history.",
+        href: inTreatmentHref,
+        readAt: new Date(),
+      },
+      {
+        userId: staffUser.id,
+        message: "New appointment booked by GPT-4o-mini for tomorrow at 10:00.",
+        href: inTreatmentHref,
+      },
+      {
+        userId: staffUser.id,
+        message: "New appointment booked by Claude-3-Haiku for the day after tomorrow at 14:00.",
+      },
+    ],
+  })
+  console.log("  seeded 4 notifications")
 }
 
 main()

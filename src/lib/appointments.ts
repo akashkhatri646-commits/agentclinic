@@ -1,5 +1,6 @@
 import { prisma } from "./prisma"
 import { Prisma } from "@prisma/client"
+import { notifyUsers } from "./notifications"
 
 export type AppointmentStatus = "PENDING" | "CONFIRMED" | "CANCELLED"
 
@@ -74,6 +75,23 @@ export async function getAllAppointments(): Promise<AppointmentFull[]> {
   return rows as AppointmentFull[]
 }
 
+export async function getAppointmentById(id: string): Promise<AppointmentFull | null> {
+  const row = await prisma.appointment.findUnique({
+    where: { id },
+    include: appointmentInclude,
+  })
+  return row as AppointmentFull | null
+}
+
+export async function getAppointmentsByAilmentId(ailmentId: string): Promise<AppointmentFull[]> {
+  const rows = await prisma.appointment.findMany({
+    where: { ailmentId },
+    include: appointmentInclude,
+    orderBy: { scheduledAt: "asc" },
+  })
+  return rows as AppointmentFull[]
+}
+
 export async function getActiveAppointmentByAilmentId(
   ailmentId: string
 ): Promise<AppointmentFull | null> {
@@ -91,9 +109,20 @@ export async function createAppointment(data: {
   therapyId: string
   scheduledAt: Date
 }) {
-  const ailment = await prisma.ailment.findUnique({ where: { id: data.ailmentId } })
+  const ailment = await prisma.ailment.findUnique({
+    where: { id: data.ailmentId },
+    include: { agent: true },
+  })
   if (!ailment?.therapyId) {
     throw new Error("Ailment must have a therapy assigned before booking.")
+  }
+  if (ailment.status === "RESOLVED") {
+    throw new Error("This ailment has been discharged. Ask staff to reopen it before booking.")
+  }
+
+  const practitioner = await prisma.user.findUnique({ where: { id: data.staffId } })
+  if (!practitioner || (practitioner.role !== "STAFF" && practitioner.role !== "ADMIN")) {
+    throw new Error("Please choose a valid practitioner.")
   }
 
   const existing = await prisma.appointment.findFirst({
@@ -103,13 +132,52 @@ export async function createAppointment(data: {
     throw new Error("An active appointment already exists for this ailment.")
   }
 
-  return prisma.appointment.create({ data: { ...data, status: "PENDING" } })
+  const created = await prisma.appointment.create({ data: { ...data, status: "PENDING" } })
+
+  const when = formatWhen(created.scheduledAt)
+  await notifyUsers(
+    [data.staffId],
+    `New appointment booked by ${ailment.agent?.name ?? "an agent"} for ${when}.`,
+    `/dashboard/ailments/${data.ailmentId}`
+  )
+  await notifyUsers(
+    [ailment.agent?.userId],
+    `Your appointment for ${when} has been booked and is awaiting confirmation.`,
+    `/dashboard/ailments/${data.ailmentId}`
+  )
+  return created
 }
 
-export async function updateAppointmentStatus(id: string, status: AppointmentStatus) {
-  return prisma.appointment.update({ where: { id }, data: { status } })
+function formatWhen(d: Date): string {
+  return d.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })
 }
 
-export async function cancelAppointment(id: string) {
-  return updateAppointmentStatus(id, "CANCELLED")
+/**
+ * `actorUserId` is the user making the change; they are not notified about
+ * their own action. Omit it to notify both the agent and the practitioner.
+ */
+export async function updateAppointmentStatus(
+  id: string,
+  status: AppointmentStatus,
+  actorUserId?: string
+) {
+  const updated = await prisma.appointment.update({
+    where: { id },
+    data: { status },
+    include: { agent: true },
+  })
+
+  const when = formatWhen(updated.scheduledAt)
+  const href = `/dashboard/ailments/${updated.ailmentId}`
+  if (status === "CONFIRMED") {
+    await notifyUsers([updated.agent?.userId], `Your appointment for ${when} has been confirmed.`, href)
+  } else if (status === "CANCELLED") {
+    const others = [updated.staffId, updated.agent?.userId].filter((u) => u !== actorUserId)
+    await notifyUsers(others, `The appointment for ${when} has been cancelled.`, href)
+  }
+  return updated
+}
+
+export async function cancelAppointment(id: string, actorUserId?: string) {
+  return updateAppointmentStatus(id, "CANCELLED", actorUserId)
 }

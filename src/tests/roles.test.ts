@@ -24,3 +24,22 @@ describe("canAccessAdmin", () => {
   it("denies access to STAFF", () => expect(canAccessAdmin("STAFF")).toBe(false))
   it("denies access to AGENT", () => expect(canAccessAdmin("AGENT")).toBe(false))
 })
+
+describe("role edge cases", () => {
+  it("treats unknown, empty, and lower-case roles as having no privileges", async () => {
+    const { isStaff, isAdmin, isAgent, canAccessAdmin } = await import("@/lib/roles")
+    for (const role of ["", "staff", "admin", "SUPERUSER", " ADMIN"]) {
+      expect(isStaff(role)).toBe(false)
+      expect(isAdmin(role)).toBe(false)
+      expect(isAgent(role)).toBe(false)
+      expect(canAccessAdmin(role)).toBe(false)
+    }
+  })
+
+  it("only ADMIN can access admin; STAFF cannot", async () => {
+    const { canAccessAdmin } = await import("@/lib/roles")
+    expect(canAccessAdmin("ADMIN")).toBe(true)
+    expect(canAccessAdmin("STAFF")).toBe(false)
+    expect(canAccessAdmin("AGENT")).toBe(false)
+  })
+})

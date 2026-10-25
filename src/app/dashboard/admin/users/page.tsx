@@ -87,7 +87,7 @@ function RoleForm({ userId, currentRole }: { userId: string; currentRole: string
 
   return (
     <form action={handleChange} style={{ display: "flex", gap: "0.5rem", margin: 0 }}>
-      <select name="role" defaultValue={currentRole} style={{ margin: 0 }}>
+      <select name="role" aria-label="Role" defaultValue={currentRole} style={{ margin: 0 }}>
         {ROLES.map((r) => (
           <option key={r} value={r}>
             {r}

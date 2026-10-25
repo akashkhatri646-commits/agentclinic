@@ -2,10 +2,9 @@ import { auth } from "@/lib/auth"
 import {
   getAppointmentsByStaffId,
   getAllAppointments,
-  updateAppointmentStatus,
-  cancelAppointment,
   type AppointmentFull,
 } from "@/lib/appointments"
+import { confirmAppointmentAction, cancelAppointmentAction } from "../ailments/actions"
 import { isStaff } from "@/lib/roles"
 import { redirect } from "next/navigation"
 import Link from "next/link"
@@ -228,13 +227,10 @@ function AppointmentsList({ appointments }: { appointments: AppointmentFull[] })
 }
 
 function ConfirmForm({ id }: { id: string }) {
-  async function confirm() {
-    "use server"
-    await updateAppointmentStatus(id, "CONFIRMED")
-    redirect("/dashboard/appointments")
-  }
   return (
-    <form action={confirm} style={{ margin: 0 }}>
+    <form action={confirmAppointmentAction} style={{ margin: 0 }}>
+      <input type="hidden" name="appointmentId" value={id} />
+      <input type="hidden" name="returnTo" value="/dashboard/appointments" />
       <button type="submit" style={{ padding: "0.125rem 0.5rem", fontSize: "0.75rem" }}>
         Confirm
       </button>
@@ -243,13 +239,10 @@ function ConfirmForm({ id }: { id: string }) {
 }
 
 function CancelForm({ id }: { id: string }) {
-  async function cancel() {
-    "use server"
-    await cancelAppointment(id)
-    redirect("/dashboard/appointments")
-  }
   return (
-    <form action={cancel} style={{ margin: 0 }}>
+    <form action={cancelAppointmentAction} style={{ margin: 0 }}>
+      <input type="hidden" name="appointmentId" value={id} />
+      <input type="hidden" name="returnTo" value="/dashboard/appointments" />
       <button
         type="submit"
         className="outline"

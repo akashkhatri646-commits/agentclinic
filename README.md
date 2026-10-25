@@ -8,8 +8,7 @@ The clinic is the environment under test. The product thinking is in how to run 
 
 | Area | Status | Where |
 |---|---|---|
-| Clinic app: auth, roles, agents, ailments, therapies, appointment booking, staff dashboard | Built (Phases 1–5) | `src/`, `prisma/` |
-| Discharge, in-app notifications, hardening | Specified (Phase 6) | `specs/2026-10-24-phase-6-*` |
+| Clinic app: auth, roles, agents, ailments, therapies, appointment booking, staff dashboard, discharge, in-app notifications | Built (Phases 1–6) | `src/`, `prisma/` |
 | Eval harness and quality verdicts | Planned (Phase 7) | `specs/strategy.md` |
 | Loop-time and quality metrics | Planned (Phase 8) | `specs/strategy.md` |
 | Failure triage to ranked fix backlog | Planned (Phase 9) | `specs/strategy.md` |

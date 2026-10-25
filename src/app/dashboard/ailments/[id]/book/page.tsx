@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { getAilmentById } from "@/lib/ailments"
 import { getAgentByUserId } from "@/lib/agents"
 import { getAvailableSlots, createAppointment } from "@/lib/appointments"
+import { canBookForAilment } from "@/lib/guards"
 import { prisma } from "@/lib/prisma"
 import { redirect, notFound } from "next/navigation"
 
@@ -130,6 +131,14 @@ function BookSlotForm({
 }) {
   async function handleBook(formData: FormData) {
     "use server"
+    // Re-verify ownership: the ids above were captured at render time.
+    const actor = await auth()
+    if (!actor?.user?.id) redirect("/login")
+    const current = await getAilmentById(ailmentId)
+    if (!current || !canBookForAilment(actor.user.id, current.agent.userId)) {
+      redirect("/dashboard/ailments")
+    }
+
     const scheduledAtRaw = formData.get("scheduledAt") as string
     if (!scheduledAtRaw) redirect(`/dashboard/ailments/${ailmentId}/book`)
 

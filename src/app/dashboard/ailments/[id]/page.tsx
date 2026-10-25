@@ -1,10 +1,18 @@
 import { auth } from "@/lib/auth"
-import { getAilmentById, assignTherapy, type AilmentSeverity, type AilmentStatus } from "@/lib/ailments"
+import { getAilmentById, type AilmentSeverity, type AilmentStatus } from "@/lib/ailments"
 import { getAllTherapies } from "@/lib/therapies"
-import { getActiveAppointmentByAilmentId, cancelAppointment } from "@/lib/appointments"
+import { getAppointmentsByAilmentId, type AppointmentFull } from "@/lib/appointments"
 import { isStaff } from "@/lib/roles"
+import { canViewAilment } from "@/lib/guards"
 import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
+import {
+  assignTherapyAction,
+  cancelAppointmentAction,
+  confirmAppointmentAction,
+  dischargeAilmentAction,
+  reopenAilmentAction,
+} from "../actions"
 
 export const metadata = { title: "Ailment Detail — AgentClinic" }
 
@@ -22,7 +30,13 @@ function AppointmentStatusBadge({ status }: { status: string }) {
   return <span className={`badge badge-${slug}`}>{status}</span>
 }
 
-export default async function AilmentDetailPage({ params }: { params: { id: string } }) {
+export default async function AilmentDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string }
+  searchParams: { error?: string }
+}) {
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
 
@@ -33,16 +47,18 @@ export default async function AilmentDetailPage({ params }: { params: { id: stri
   const staff = isStaff(role)
 
   // Agents can only view their own ailments
-  if (!staff) {
-    const { getAgentByUserId } = await import("@/lib/agents")
-    const agent = await getAgentByUserId(session.user.id)
-    if (!agent || agent.id !== ailment.agentId) redirect("/dashboard/ailments")
+  if (!canViewAilment(role, session.user.id, ailment.agent.userId)) {
+    redirect("/dashboard/ailments")
   }
 
-  const [therapies, activeAppointment] = await Promise.all([
+  const [therapies, appointments] = await Promise.all([
     staff ? getAllTherapies() : Promise.resolve([]),
-    getActiveAppointmentByAilmentId(ailment.id),
+    getAppointmentsByAilmentId(ailment.id),
   ])
+  const activeAppointment =
+    appointments.find((a) => a.status === "PENDING" || a.status === "CONFIRMED") ?? null
+  const resolved = ailment.status === "RESOLVED"
+  const error = searchParams.error
 
   return (
     <article>
@@ -55,6 +71,12 @@ export default async function AilmentDetailPage({ params }: { params: { id: stri
           ← Back
         </Link>
       </header>
+
+      {error && (
+        <p role="alert">
+          <small style={{ color: "var(--pico-del-color)" }}>{error}</small>
+        </p>
+      )}
 
       <dl>
         <dt>Description</dt>
@@ -71,10 +93,18 @@ export default async function AilmentDetailPage({ params }: { params: { id: stri
         <dd>{ailment.createdAt.toLocaleDateString("en-GB", { dateStyle: "long" })}</dd>
         <dt>Assigned Therapy</dt>
         <dd>{ailment.therapy ? ailment.therapy.name : <em>None assigned</em>}</dd>
+        {ailment.dischargedAt && (
+          <>
+            <dt>Discharged</dt>
+            <dd>{ailment.dischargedAt.toLocaleDateString("en-GB", { dateStyle: "long" })}</dd>
+            <dt>Discharge Note</dt>
+            <dd>{ailment.dischargeNote}</dd>
+          </>
+        )}
       </dl>
 
       {/* Staff: assign therapy */}
-      {staff && ailment.status !== "RESOLVED" && (
+      {staff && !resolved && (
         <section>
           <h3>Assign Therapy</h3>
           <AssignTherapyForm
@@ -86,7 +116,7 @@ export default async function AilmentDetailPage({ params }: { params: { id: stri
       )}
 
       {/* Agent: appointment section */}
-      {!staff && (
+      {!staff && !resolved && (
         <section>
           <h3>Appointment</h3>
           {activeAppointment ? (
@@ -129,6 +159,40 @@ export default async function AilmentDetailPage({ params }: { params: { id: stri
         </section>
       )}
 
+      {/* Staff: discharge / reopen */}
+      {staff && !resolved && (
+        <section>
+          <h3>Discharge</h3>
+          <form action={dischargeAilmentAction}>
+            <input type="hidden" name="ailmentId" value={ailment.id} />
+            <label>
+              Discharge note
+              <textarea
+                name="note"
+                required
+                maxLength={2000}
+                rows={3}
+                placeholder="Summarise the treatment and outcome…"
+              />
+            </label>
+            <button type="submit">Discharge ailment</button>
+          </form>
+          <small>Discharging cancels any upcoming appointments for this ailment.</small>
+        </section>
+      )}
+
+      {staff && resolved && (
+        <section>
+          <h3>Reopen</h3>
+          <form action={reopenAilmentAction}>
+            <input type="hidden" name="ailmentId" value={ailment.id} />
+            <button type="submit" className="outline">
+              Reopen ailment
+            </button>
+          </form>
+        </section>
+      )}
+
       {/* Staff: appointment management */}
       {staff && activeAppointment && (
         <section>
@@ -149,12 +213,69 @@ export default async function AilmentDetailPage({ params }: { params: { id: stri
             </dd>
           </dl>
           <div style={{ display: "flex", gap: "1rem" }}>
-            <ConfirmAppointmentForm appointmentId={activeAppointment.id} />
+            {activeAppointment.status === "PENDING" && (
+              <ConfirmAppointmentForm appointmentId={activeAppointment.id} ailmentId={ailment.id} />
+            )}
             <CancelAppointmentForm appointmentId={activeAppointment.id} ailmentId={ailment.id} />
           </div>
         </section>
       )}
+
+      <TreatmentHistory ailment={ailment} appointments={appointments} />
     </article>
+  )
+}
+
+type HistoryEntry = { at: Date; label: React.ReactNode }
+
+function TreatmentHistory({
+  ailment,
+  appointments,
+}: {
+  ailment: NonNullable<Awaited<ReturnType<typeof getAilmentById>>>
+  appointments: AppointmentFull[]
+}) {
+  const fmt = (d: Date) => d.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })
+  const entries: HistoryEntry[] = [
+    {
+      at: ailment.createdAt,
+      label: <>Ailment logged ({ailment.severity.toLowerCase()} severity)</>,
+    },
+    ...appointments.map((a) => ({
+      at: a.scheduledAt,
+      label: (
+        <>
+          {a.therapy.name} session with {a.staff.email}{" "}
+          <AppointmentStatusBadge status={a.status} />
+        </>
+      ),
+    })),
+  ]
+  if (ailment.dischargedAt) {
+    entries.push({
+      at: ailment.dischargedAt,
+      label: (
+        <>
+          <strong>Discharged.</strong> {ailment.dischargeNote}
+        </>
+      ),
+    })
+  }
+  entries.sort((x, y) => x.at.getTime() - y.at.getTime())
+
+  return (
+    <section aria-labelledby="history-heading">
+      <h3 id="history-heading">Treatment History</h3>
+      <ol>
+        {entries.map((e, i) => (
+          <li key={i}>
+            <small>{fmt(e.at)}</small>
+            <br />
+            {e.label}
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
 
@@ -167,16 +288,9 @@ function AssignTherapyForm({
   therapies: { id: string; name: string; durationMinutes: number }[]
   currentTherapyId?: string
 }) {
-  async function handleAssign(formData: FormData) {
-    "use server"
-    const therapyId = formData.get("therapyId") as string
-    if (!therapyId) return
-    await assignTherapy(ailmentId, therapyId)
-    redirect(`/dashboard/ailments/${ailmentId}`)
-  }
-
   return (
-    <form action={handleAssign}>
+    <form action={assignTherapyAction}>
+      <input type="hidden" name="ailmentId" value={ailmentId} />
       <label>
         Therapy
         <select name="therapyId" required defaultValue={currentTherapyId ?? ""}>
@@ -200,13 +314,10 @@ function CancelAppointmentForm({
   appointmentId: string
   ailmentId: string
 }) {
-  async function handleCancel() {
-    "use server"
-    await cancelAppointment(appointmentId)
-    redirect(`/dashboard/ailments/${ailmentId}`)
-  }
   return (
-    <form action={handleCancel} style={{ margin: 0 }}>
+    <form action={cancelAppointmentAction} style={{ margin: 0 }}>
+      <input type="hidden" name="appointmentId" value={appointmentId} />
+      <input type="hidden" name="returnTo" value={`/dashboard/ailments/${ailmentId}`} />
       <button
         type="submit"
         className="outline"
@@ -218,15 +329,17 @@ function CancelAppointmentForm({
   )
 }
 
-function ConfirmAppointmentForm({ appointmentId }: { appointmentId: string }) {
-  async function handleConfirm() {
-    "use server"
-    const { updateAppointmentStatus } = await import("@/lib/appointments")
-    await updateAppointmentStatus(appointmentId, "CONFIRMED")
-    redirect(".")
-  }
+function ConfirmAppointmentForm({
+  appointmentId,
+  ailmentId,
+}: {
+  appointmentId: string
+  ailmentId: string
+}) {
   return (
-    <form action={handleConfirm} style={{ margin: 0 }}>
+    <form action={confirmAppointmentAction} style={{ margin: 0 }}>
+      <input type="hidden" name="appointmentId" value={appointmentId} />
+      <input type="hidden" name="returnTo" value={`/dashboard/ailments/${ailmentId}`} />
       <button type="submit">Confirm appointment</button>
     </form>
   )

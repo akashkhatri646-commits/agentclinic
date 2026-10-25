@@ -73,7 +73,7 @@ Goal: staff and admins have a clear operational overview; the UI is attractive e
 
 ---
 
-## Phase 6 — Discharge, In-App Notifications & Hardening
+## Phase 6 — Discharge, In-App Notifications & Hardening ✓ Complete
 
 Goal: close the treatment loop from intake to discharge, tell users about appointment changes without external services, and harden quality.
 

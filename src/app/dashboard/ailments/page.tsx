@@ -57,6 +57,9 @@ export default async function AilmentsPage() {
     ailments = await getAilmentsByAgentId(agent.id)
   }
 
+  const active = ailments.filter((a) => a.status !== "RESOLVED")
+  const discharged = ailments.filter((a) => a.status === "RESOLVED")
+
   return (
     <article>
       <header>
@@ -81,49 +84,70 @@ export default async function AilmentsPage() {
           actionLabel={role !== "STAFF" ? "Log a new ailment" : undefined}
         />
       ) : (
-        <figure>
-          <table>
-            <thead>
-              <tr>
-                {staff && <th>Agent</th>}
-                <th>Description</th>
-                <th>Severity</th>
-                <th>Status</th>
-                <th>Logged</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {ailments.map((a) => (
-                <tr key={a.id}>
-                  {staff && <td>{a.agent.name}</td>}
-                  <td>
-                    {a.description.length > 80
-                      ? a.description.slice(0, 80) + "…"
-                      : a.description}
-                  </td>
-                  <td>
-                    <SeverityBadge severity={a.severity} />
-                  </td>
-                  <td>
-                    <StatusBadge status={a.status} />
-                  </td>
-                  <td>
-                    {a.createdAt.toLocaleDateString("en-GB", {
-                      dateStyle: "medium",
-                    })}
-                  </td>
-                  <td>
-                    <Link href={`/dashboard/ailments/${a.id}`} role="button" className="outline">
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </figure>
+        <>
+          {active.length === 0 ? (
+            <p>
+              <em>No active ailments.</em>
+            </p>
+          ) : (
+            <AilmentTable ailments={active} staff={staff} />
+          )}
+
+          {discharged.length > 0 && (
+            <section aria-labelledby="discharged-heading">
+              <h3 id="discharged-heading">Discharged ({discharged.length})</h3>
+              <AilmentTable ailments={discharged} staff={staff} />
+            </section>
+          )}
+        </>
       )}
     </article>
+  )
+}
+
+function AilmentTable({ ailments, staff }: { ailments: AilmentWithAgent[]; staff: boolean }) {
+  return (
+    <figure>
+      <table>
+        <thead>
+          <tr>
+            {staff && <th>Agent</th>}
+            <th>Description</th>
+            <th>Severity</th>
+            <th>Status</th>
+            <th>Logged</th>
+            <th>
+              <span className="visually-hidden">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {ailments.map((a) => (
+            <tr key={a.id}>
+              {staff && <td>{a.agent.name}</td>}
+              <td>
+                {a.description.length > 80 ? a.description.slice(0, 80) + "…" : a.description}
+              </td>
+              <td>
+                <SeverityBadge severity={a.severity} />
+              </td>
+              <td>
+                <StatusBadge status={a.status} />
+              </td>
+              <td>
+                {a.createdAt.toLocaleDateString("en-GB", {
+                  dateStyle: "medium",
+                })}
+              </td>
+              <td>
+                <Link href={`/dashboard/ailments/${a.id}`} role="button" className="outline">
+                  View
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </figure>
   )
 }

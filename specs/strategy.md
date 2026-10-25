@@ -66,7 +66,7 @@ Targets are placeholders to be calibrated against a measured baseline in the pil
 | Phase | Theme | Status | Why in this order |
 |---|---|---|---|
 | 1–5 | Clinic app: auth, agents, ailments, therapies, booking, dashboard | Complete | Builds the realistic environment under test |
-| 6 | Discharge, notifications, hardening | In spec | Closes the intake→discharge loop; it is the "fix verified" state later phases reuse |
+| 6 | Discharge, notifications, hardening | Complete | Closes the intake→discharge loop; it is the "fix verified" state later phases reuse |
 | 7 | **Eval harness**: golden scenarios, runner, deterministic + LLM-judge checks, quality verdict | Planned | Without a trustworthy verdict nothing else matters |
 | 8 | **Loop-time and quality metrics**: change→verdict timing, pass rate per version, regression flags | Planned | Makes the north star measurable early, so progress is provable |
 | 9 | **Failure triage**: cluster failures, score by frequency × severity × effort, ranked fix backlog | Planned | Turns verdicts into action |
