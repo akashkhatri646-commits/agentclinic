@@ -100,7 +100,7 @@ Goal: run a defined AI Specialist against golden scenarios in the clinic environ
 
 ---
 
-## Phase 8 — Loop-Time & Quality Metrics
+## Phase 8 — Loop-Time & Quality Metrics ✓ Complete
 
 Goal: make the north-star metric (change → verdict loop time) measurable, with a visible baseline.
 

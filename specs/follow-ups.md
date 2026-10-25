@@ -41,6 +41,22 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 - The manual flows in `specs/2026-10-25-phase-7-eval-harness/validation.md` were checked over HTTP and in headless Chrome, not walked through by hand in a browser.
 - The README run-locally steps have still not been tested on a clean clone.
 
+## Phase 8 (loop-time metrics)
+
+| Area | Issue | Impact | Suggested fix |
+|---|---|---|---|
+| Seeded timings | The `v1` (21 days) and `v2` (2 days) loop times are invented, by design and flagged as sample | The headline story is illustrative, not measured; a real loop time needs real use over days | Replace with real data as versions ship; keep the flag so it is never confused |
+| Very little data | Only two versions exist, so the median, baseline and "trend" rest on two points | Statistics and the chart say little yet | Add versions and runs; show the sample size next to each number (already done) |
+| Sample and real mixed | A database that already has real runs plus the seeded sample runs mixes both into the median, with only a notice to say so | The headline could blend invented and real timings | Offer a toggle to exclude sample runs from the headline once real data exists |
+| Release dates | A version's release date is a constant in code, and `v1` and `v2` are both dated the day they were written | No "Change" record, so non-code changes (prompts, config) cannot be logged; real release times are approximate | Add a Change record and form (Phase 10) |
+| Chart | No keyboard focus or custom tooltips: hover uses native tooltips and the table beneath is the accessible alternative. Loop time is not charted | Less interactive than it could be | A loop-time bar chart against the target; keyboard-focusable points |
+| Time zone | Dates are shown in UTC | Unfamiliar for some readers, but identical everywhere | Add a viewer time-zone setting if needed |
+
+### Not verified in Phase 8
+
+- The manual flows in `specs/2026-10-25-phase-8-loop-time-metrics/validation.md` were checked over HTTP and in headless Chrome, not by hand in a browser.
+- The chart was checked in headless Chrome screenshots and by the axe audit, not with a screen reader.
+
 ## Design notes
 
 - Discharging an `OPEN` ailment with no therapy is allowed (the Phase 6 plan permits it). The agent's notification then points to a history that only shows intake and discharge.
