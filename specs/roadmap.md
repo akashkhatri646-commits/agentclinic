@@ -86,7 +86,7 @@ Goal: close the treatment loop from intake to discharge, tell users about appoin
 
 ---
 
-## Phase 7 — Eval Harness & Quality Verdicts
+## Phase 7 — Eval Harness & Quality Verdicts ✓ Complete
 
 Goal: run a defined AI Specialist against golden scenarios in the clinic environment and get a trustworthy, actionable quality verdict.
 
