@@ -57,6 +57,11 @@ export default async function Sidebar() {
             </>
           )}
 
+          {/* Everyone: notifications */}
+          <li>
+            <Link href="/dashboard/notifications">Notifications</Link>
+          </li>
+
           {/* ADMIN only: user management */}
           {admin && (
             <li>
