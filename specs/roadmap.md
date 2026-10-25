@@ -113,7 +113,7 @@ Goal: make the north-star metric (change → verdict loop time) measurable, with
 
 ---
 
-## Phase 9 — Failure Triage & Prioritized Fixes
+## Phase 9 — Failure Triage & Prioritized Fixes ✓ Complete
 
 Goal: turn eval failures into a ranked fix backlog and track each fix through to verification.
 
