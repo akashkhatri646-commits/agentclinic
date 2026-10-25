@@ -81,3 +81,42 @@ model Notification {
 
   @@index([userId, readAt])
 }
+
+model EvalRun {
+  id             String       @id @default(cuid())
+  specialistId   String
+  version        String
+  status         String       @default("COMPLETED") // COMPLETED
+  devTotal       Int
+  devPassed      Int
+  holdoutTotal   Int
+  holdoutPassed  Int
+  verdict        String       // PASS | FAIL
+  verdictReason  String
+  judgeEnabled   Boolean      @default(false)
+  triggeredBy    String?      // user id, or "cli"
+  createdAt      DateTime     @default(now())
+  results        EvalResult[]
+
+  @@index([specialistId, version, createdAt])
+}
+
+model EvalResult {
+  id               String  @id @default(cuid())
+  runId            String
+  run              EvalRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  scenarioId       String
+  split            String  // DEV | HOLDOUT
+  passed           Boolean
+  category         String?
+  reason           String?
+  expectedSeverity String
+  expectedTherapy  String
+  actualSeverity   String
+  actualTherapy    String
+  rationale        String
+  judgeScore       Int?
+  judgeNote        String?
+
+  @@index([runId])
+}
