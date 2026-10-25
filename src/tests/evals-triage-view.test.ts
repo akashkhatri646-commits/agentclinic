@@ -3,8 +3,11 @@ import { INTAKE_TRIAGE_SCENARIOS as scenarios } from "../lib/evals/scenarios/int
 import {
   buildBacklog,
   currentRun,
+  FIX_STATUS_LABEL,
+  describeEvent,
   describeFixes,
   scenarioRows,
+  statusActionLabel,
   toBacklogItem,
   toFixView,
   type FixRow,
@@ -262,5 +265,47 @@ describe("scenarioRows", () => {
 
   it("returns nothing for an unknown theme", () => {
     expect(scenarioRows("nope", scenarios, [], [], true)).toEqual([])
+  })
+})
+
+describe("wording", () => {
+  it("labels every status in words", () => {
+    expect(FIX_STATUS_LABEL).toEqual({
+      PROPOSED: "Proposed",
+      IN_PROGRESS: "In progress",
+      SHIPPED: "Shipped",
+      VERIFIED: "Verified",
+    })
+  })
+
+  it("gives each allowed move a button label, and a sensible fallback otherwise", () => {
+    expect(statusActionLabel("PROPOSED", "IN_PROGRESS")).toBe("Start work")
+    expect(statusActionLabel("IN_PROGRESS", "SHIPPED")).toBe("Mark as shipped")
+    expect(statusActionLabel("SHIPPED", "IN_PROGRESS")).toBe("Move back to in progress")
+    expect(statusActionLabel("IN_PROGRESS", "PROPOSED")).toBe("Move back to proposed")
+    expect(statusActionLabel("PROPOSED", "VERIFIED")).toBe("Move to verified")
+  })
+
+  it("describes each kind of history entry as a sentence", () => {
+    expect(describeEvent({ kind: "CREATED", fromStatus: null, toStatus: "PROPOSED", note: "Owner: a@b." })).toBe(
+      "Created as proposed. Owner: a@b."
+    )
+    expect(describeEvent({ kind: "STATUS", fromStatus: "IN_PROGRESS", toStatus: "SHIPPED", note: "Shipped in v2." })).toBe(
+      "In progress to shipped. Shipped in v2."
+    )
+    expect(describeEvent({ kind: "STATUS", fromStatus: "PROPOSED", toStatus: "IN_PROGRESS", note: null })).toBe(
+      "Proposed to in progress."
+    )
+    expect(describeEvent({ kind: "OWNER", fromStatus: "PROPOSED", toStatus: "PROPOSED", note: "Owner cleared." })).toBe(
+      "Owner cleared."
+    )
+    expect(describeEvent({ kind: "VERIFIED", fromStatus: "SHIPPED", toStatus: "VERIFIED", note: null })).toBe(
+      "Verified by a run."
+    )
+  })
+
+  it("does not fail on an unknown kind or a status it does not know", () => {
+    expect(describeEvent({ kind: "ODD", fromStatus: null, toStatus: null, note: null })).toBe("ODD")
+    expect(describeEvent({ kind: "STATUS", fromStatus: "WEIRD", toStatus: "SHIPPED", note: null })).toBe("WEIRD to shipped.")
   })
 })

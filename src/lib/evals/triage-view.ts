@@ -241,3 +241,47 @@ export function scenarioRows(
       regressed: regressedIds.includes(s.id),
     }))
 }
+
+/* ───────────────────────── wording ───────────────────────── */
+
+export const FIX_STATUS_LABEL: Record<FixStatus, string> = {
+  PROPOSED: "Proposed",
+  IN_PROGRESS: "In progress",
+  SHIPPED: "Shipped",
+  VERIFIED: "Verified",
+}
+
+const ACTION_LABEL: Record<string, string> = {
+  "PROPOSED>IN_PROGRESS": "Start work",
+  "IN_PROGRESS>PROPOSED": "Move back to proposed",
+  "IN_PROGRESS>SHIPPED": "Mark as shipped",
+  "SHIPPED>IN_PROGRESS": "Move back to in progress",
+}
+
+/** The button text for moving a fix from one status to another. */
+export function statusActionLabel(from: FixStatus, to: FixStatus): string {
+  return ACTION_LABEL[`${from}>${to}`] ?? `Move to ${FIX_STATUS_LABEL[to].toLowerCase()}`
+}
+
+/** A history entry as a sentence. */
+export function describeEvent(e: {
+  kind: string
+  fromStatus: string | null
+  toStatus: string | null
+  note: string | null
+}): string {
+  const label = (s: string | null) => (s && isFixStatus(s) ? FIX_STATUS_LABEL[s] : (s ?? "unknown"))
+  const note = e.note ? ` ${e.note}` : ""
+  switch (e.kind) {
+    case "CREATED":
+      return `Created as proposed.${note}`
+    case "STATUS":
+      return `${label(e.fromStatus)} to ${label(e.toStatus).toLowerCase()}.${note}`
+    case "OWNER":
+      return e.note ?? "Owner changed."
+    case "VERIFIED":
+      return e.note ?? "Verified by a run."
+    default:
+      return e.kind
+  }
+}
