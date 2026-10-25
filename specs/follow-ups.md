@@ -22,6 +22,25 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 | No atomicity between "is there an active appointment" and "create it" | A double click or two tabs can create two PENDING appointments for one ailment | Unique constraint or a transaction |
 | `therapyId` is taken from the form and not checked against the ailment's therapy | A forged form can book a different therapy | Use `ailment.therapyId` server-side |
 
+
+## Phase 7 (eval harness)
+
+| Area | Issue | Impact | Suggested fix |
+|---|---|---|---|
+| LLM judge | Never run against the real API; only tested with a fake client | Request shape, structured-output parsing and model behaviour are unverified end to end | Run `npm run eval -- --judge` once with an `ANTHROPIC_API_KEY` and record the result |
+| Hold-out set | The scenarios and the `v2` rules were written by the same author in one sitting | The hold-out is not statistically independent, so the `v2` PASS demonstrates the harness, not that `v2` generalises. Some `v2` vocabulary (for example "do not exist", "leak") overlaps hold-out wording | Have a second person write new hold-out scenarios; rotate real failures into the dev set (Phase 9) |
+| Scenarios and specialists | Defined in code, not data | Adding a scenario or specialist means a code change | Move to the database with an editor (Phase 10) |
+| Concurrency and cost | Two runs can be started at once, there is no throttle, and runs cannot be deleted. With the judge on, each run makes one small Haiku call per passing scenario (about 30) | Extra rows, and API spend that is unbounded in principle (cents per run in practice); staff-only | Optional: disable the button while a run is in flight, rate-limit the action, add run deletion |
+| Unknown run id | Returns HTTP 200 with the not-found page | Same for every route with a loading skeleton; only matters to tools that read the status code | Accept, or drop the skeleton on that route |
+| Demo data | `prisma/seed.ts` names a demo agent's model `claude-3-haiku-20240307`, a retired model id | Cosmetic; no API call uses it | Rename to a current model string |
+| Header at 375 px | The header now wraps onto several lines | Works, but a proper mobile menu would be tidier | Collapse the nav behind a menu button on small screens |
+| Process | Phase 6's "no horizontal overflow" check passed while the Sign out button was clipped off-screen at 375 px, because the layout hides overflow instead of scrolling | Fixed in Phase 7; `npm run audit` now checks the button is on screen | Keep that check; consider an explicit visual review at 375 px for any header change |
+
+### Not verified in Phase 7
+
+- The manual flows in `specs/2026-10-25-phase-7-eval-harness/validation.md` were checked over HTTP and in headless Chrome, not walked through by hand in a browser.
+- The README run-locally steps have still not been tested on a clean clone.
+
 ## Design notes
 
 - Discharging an `OPEN` ailment with no therapy is allowed (the Phase 6 plan permits it). The agent's notification then points to a history that only shows intake and discharge.
@@ -35,4 +54,4 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 ## Tooling
 
 - `next start` needs `AUTH_TRUST_HOST=true` locally. `npm run dev` does not.
-- The audit script used for axe and responsive checks lived in a scratch directory. Consider committing it under `scripts/` for Phase 7 onward.
+- `npm run audit` (`scripts/audit.js`) needs the app running on port 3100 with the seeded database, and Chrome. It signs in as each role, so it relies on the demo accounts from `prisma/seed.ts`.

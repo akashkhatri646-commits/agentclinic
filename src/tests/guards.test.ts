@@ -6,6 +6,8 @@ import {
   canBookForAilment,
   canConfirmAppointment,
   canCancelAppointment,
+  canViewEvals,
+  canRunEvals,
 } from "@/lib/guards"
 
 describe("staff-only guards", () => {
@@ -63,5 +65,18 @@ describe("canCancelAppointment", () => {
 
   it("denies an agent when the appointment owner is unknown", () => {
     expect(canCancelAppointment("AGENT", "a1", undefined)).toBe(false)
+  })
+})
+
+describe("eval guards", () => {
+  it.each([
+    ["STAFF", true],
+    ["ADMIN", true],
+    ["AGENT", false],
+    ["", false],
+    ["admin", false],
+  ])("role %j -> view/run evals = %s", (role, expected) => {
+    expect(canViewEvals(role)).toBe(expected)
+    expect(canRunEvals(role)).toBe(expected)
   })
 })

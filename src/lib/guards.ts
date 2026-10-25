@@ -37,3 +37,8 @@ export function canCancelAppointment(
 ): boolean {
   return isStaff(role) || (!!appointmentAgentUserId && appointmentAgentUserId === userId)
 }
+
+/** Eval runs and verdicts are for staff and admin only; agents never see scenarios or the hold-out set. */
+export const canViewEvals = (role: string): boolean => isStaff(role)
+
+export const canRunEvals = (role: string): boolean => isStaff(role)

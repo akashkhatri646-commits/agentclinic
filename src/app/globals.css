@@ -238,3 +238,32 @@ textarea:focus-visible {
 figure {
   position: relative;
 }
+
+/* ─── Evals ───────────────────────────────────────────────────────── */
+.badge-verdict-pass { background-color: #d1fae5; color: #065f46; }
+.badge-verdict-fail { background-color: #fee2e2; color: #991b1b; }
+
+.verdict-banner {
+  padding: var(--pico-spacing);
+  margin-bottom: var(--pico-spacing);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+}
+
+.verdict-banner h3 {
+  margin-bottom: 0.5rem;
+}
+
+/* ─── Header on small screens ─────────────────────────────────────── */
+/* The header has more items than fit in one row at 375px. Without wrapping,
+   the layout's overflow-x: hidden clips them, which hid the Sign out button. */
+@media (max-width: 767px) {
+  .site-header nav {
+    flex-wrap: wrap;
+  }
+
+  .site-header nav ul {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+  }
+}
