@@ -92,6 +92,8 @@ describe("deleteTherapy", () => {
       status: "IN_TREATMENT",
       createdAt: new Date(),
       therapyId: "therapy-1",
+      dischargedAt: null,
+      dischargeNote: null,
     })
     await expect(deleteTherapy("therapy-1")).rejects.toThrow(
       "assigned to one or more ailments"
