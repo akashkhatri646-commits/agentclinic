@@ -59,9 +59,14 @@ export default async function Sidebar() {
 
           {/* STAFF + ADMIN: evals */}
           {staff && (
-            <li>
-              <Link href="/dashboard/evals">Evals</Link>
-            </li>
+            <>
+              <li>
+                <Link href="/dashboard/evals">Evals</Link>
+              </li>
+              <li>
+                <Link href="/dashboard/metrics">Metrics</Link>
+              </li>
+            </>
           )}
 
           {/* Everyone: notifications */}
