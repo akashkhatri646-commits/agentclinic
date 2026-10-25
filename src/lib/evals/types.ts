@@ -1,3 +1,5 @@
+import type { ThemeId } from "./themes"
+
 export type Severity = "LOW" | "MEDIUM" | "HIGH"
 export type Split = "DEV" | "HOLDOUT"
 export type Verdict = "PASS" | "FAIL"
@@ -24,6 +26,8 @@ export type SpecialistOutput = {
 export type Scenario = {
   id: string
   split: Split
+  /** The weakness this scenario probes. Failing scenarios are grouped by theme into failure modes. */
+  theme: ThemeId
   description: string
   expectedSeverity: Severity
   expectedTherapy: string
