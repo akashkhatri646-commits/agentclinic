@@ -4,6 +4,12 @@
 
 The clinic is the environment under test. The product thinking is in how to run the improvement loop (test, find failures, prioritize fixes, ship, re-test) faster and without a central team in the room. Read the strategy: [`specs/strategy.md`](specs/strategy.md).
 
+## Screenshots
+
+| Staff dashboard | Notifications (unread badge in nav) |
+|---|---|
+| ![Staff dashboard](docs/screenshots/staff-dashboard.png) | ![Notifications](docs/screenshots/notifications.png) |
+
 ## What's here
 
 | Area | Status | Where |
@@ -32,6 +38,7 @@ Planned phases are proposals and are not implemented yet.
 - [`specs/strategy.md`](specs/strategy.md): problem, personas, metrics, scope, roadmap rationale, scale path, customer-instance program, risks.
 - [`specs/mission.md`](specs/mission.md): original product mission.
 - [`specs/roadmap.md`](specs/roadmap.md): phase-by-phase delivery plan and status.
+- [`specs/follow-ups.md`](specs/follow-ups.md): known issues and deferred work.
 - [`specs/tech-stack.md`](specs/tech-stack.md): stack and conventions.
 - [`prompts.md`](prompts.md) and [`CHANGELOG.md`](CHANGELOG.md): how the project was built with an AI coding agent using spec-driven development.
 
