@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { runEval, type EvalDb } from "../lib/evals/runner"
+import { syncFailureModes } from "../lib/evals/triage-sync"
 import { INTAKE_TRIAGE_ID, getSpecialistVersion } from "../lib/evals/specialists"
 import { INTAKE_TRIAGE_SCENARIOS } from "../lib/evals/scenarios/intake-triage"
 import { SEEDED_THERAPY_NAMES, THERAPY } from "../lib/evals/catalogue"
 import type { Judge } from "../lib/evals/types"
+
+// The triage sync has its own tests; here we only check that the runner calls it and survives its failure.
+vi.mock("../lib/evals/triage-sync", () => ({ syncFailureModes: vi.fn(async () => ({ created: 0, updated: 0, verified: 0, reappeared: 0 })) }))
 
 // The factory runs only if the module is actually imported, so this records whether the runner loaded the shared client.
 const prismaLoaded = vi.hoisted(() => vi.fn())
@@ -109,6 +113,50 @@ describe("shipped specialist versions (pins the demo story)", () => {
   it("v2 gets d23, d24 and h08 wrong and nothing else", async () => {
     const r = await run("v2").promise
     expect(r.results.filter((x) => !x.passed).map((x) => x.scenarioId)).toEqual(["d23", "d24", "h08"])
+  })
+})
+
+describe("triage sync hook (Phase 9)", () => {
+  beforeEach(() => vi.mocked(syncFailureModes).mockClear())
+
+  it("syncs the triage backlog once, with the stored run and the same database client", async () => {
+    const fake = fakeDb()
+    const r = await runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v2", db: fake.db })
+    expect(syncFailureModes).toHaveBeenCalledTimes(1)
+    const [run, db] = vi.mocked(syncFailureModes).mock.calls[0]
+    expect(run).toBe(r)
+    expect(db).toBe(fake.db)
+  })
+
+  it("syncs after the run is stored, never before", async () => {
+    const fake = fakeDb()
+    vi.mocked(syncFailureModes).mockImplementationOnce(async () => {
+      expect(fake.create).toHaveBeenCalledTimes(1)
+      return { created: 0, updated: 0, verified: 0, reappeared: 0 }
+    })
+    await runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v2", db: fake.db })
+  })
+
+  it("still returns the stored run, and logs, when the sync fails", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.mocked(syncFailureModes).mockRejectedValueOnce(new Error("no such table: FailureMode"))
+    const r = await run("v2").promise
+    expect(r.verdict).toBe("PASS")
+    expect(r.results).toHaveLength(32)
+    expect(spy).toHaveBeenCalledWith("Failed to update the triage backlog after an eval run", expect.any(Error))
+    spy.mockRestore()
+  })
+
+  it("does not sync when the run could not be stored", async () => {
+    const fake = fakeDb()
+    fake.create.mockRejectedValueOnce(new Error("db down"))
+    await expect(runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v2", db: fake.db })).rejects.toThrow("db down")
+    expect(syncFailureModes).not.toHaveBeenCalled()
+  })
+
+  it("does not sync for an unknown version", async () => {
+    await expect(runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v9", db: fakeDb().db })).rejects.toThrow()
+    expect(syncFailureModes).not.toHaveBeenCalled()
   })
 })
 
