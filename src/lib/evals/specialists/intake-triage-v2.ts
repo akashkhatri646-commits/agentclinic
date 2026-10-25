@@ -155,6 +155,8 @@ function run({ description }: { description: string }): SpecialistOutput {
 export const intakeTriageV2: SpecialistVersion = {
   specialistId: INTAKE_TRIAGE_ID,
   version: "v2",
+  // Approximate: v1 and v2 were both written on 2026-10-25, the day Phase 7 was built.
+  releasedAt: new Date("2026-10-25T15:00:00Z"),
   summary:
     "Adds negation handling, persistent/chronic wording, softening words, human-expectation and wider fabrication rules, whole-word matching, and grounded rationales. Still weak on sarcasm and idiom.",
   run,

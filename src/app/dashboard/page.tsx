@@ -3,6 +3,8 @@ import { getDashboardStats } from "@/lib/dashboard"
 import { isStaff } from "@/lib/roles"
 import { redirect } from "next/navigation"
 import Link from "next/link"
+import { getLoopTimeTile } from "@/lib/evals/summary"
+import { LOOP_TIME_TARGET_LABEL, formatDuration, targetStatus } from "@/lib/evals/metrics"
 
 export const metadata = { title: "Dashboard — AgentClinic" }
 
@@ -15,6 +17,9 @@ export default async function DashboardPage() {
 
   const { activeCaseload, upcomingAppointments, severityCounts } =
     await getDashboardStats()
+
+  // Fail-soft: null if the metrics cannot be loaded, so the dashboard still renders.
+  const loopTile = await getLoopTimeTile()
 
   const total = severityCounts.LOW + severityCounts.MEDIUM + severityCounts.HIGH || 1
 
@@ -46,6 +51,32 @@ export default async function DashboardPage() {
               <small>Next 5</small>
             </p>
           </div>
+
+          {loopTile && (
+            <div className="stat-tile">
+              <p className="stat-label">Median loop time</p>
+              <p className="stat-value">{formatDuration(loopTile.medianLoopMs)}</p>
+              <p>
+                <small>
+                  Target: under {LOOP_TIME_TARGET_LABEL}.{" "}
+                  <strong>{targetStatus(loopTile.withinTarget)}</strong>.
+                </small>
+              </p>
+              {loopTile.latestMs !== null && (
+                <p>
+                  <small>
+                    Latest ({loopTile.latestVersion}): {formatDuration(loopTile.latestMs)}
+                  </small>
+                </p>
+              )}
+              <p>
+                <small>
+                  <Link href="/dashboard/metrics">View metrics</Link>
+                  {loopTile.includesSample && " · includes sample data"}
+                </small>
+              </p>
+            </div>
+          )}
         </div>
       </article>
 

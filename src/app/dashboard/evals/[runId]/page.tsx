@@ -80,6 +80,13 @@ export default async function EvalRunPage({ params }: { params: { runId: string 
         </Link>
       </header>
 
+      {run.isSample && (
+        <aside className="sample-notice" role="note" aria-label="Sample data notice">
+          <strong>Sample run.</strong> This run&apos;s timings are illustrative and were made up for the demo. Its
+          scenario results, pass rates and verdict are real.
+        </aside>
+      )}
+
       <section aria-labelledby="verdict-heading" className="verdict-banner">
         <h3 id="verdict-heading">
           Verdict: <span className={`badge badge-verdict-${run.verdict.toLowerCase()}`}>{run.verdict}</span>

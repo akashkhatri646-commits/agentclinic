@@ -36,6 +36,8 @@ export type SpecialistVersion = {
   version: string
   /** What this version changed or is known to get wrong. */
   summary: string
+  /** When this version shipped. Copied onto each run as the start of the loop-time measurement. */
+  releasedAt: Date
   run: (input: SpecialistInput) => SpecialistOutput
 }
 

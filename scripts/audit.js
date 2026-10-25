@@ -35,7 +35,7 @@ const ROLES = {
     email: "agent@clinic.local",
     pages: ["/dashboard/ailments", "/dashboard/ailments/new", "/dashboard/notifications", "/dashboard/profile"],
     detailLists: ["/dashboard/ailments"],
-    forbidden: ["/dashboard/evals"],
+    forbidden: ["/dashboard/evals", "/dashboard/metrics"],
   },
   staff: {
     email: "staff@clinic.local",
@@ -46,13 +46,14 @@ const ROLES = {
       "/dashboard/therapies",
       "/dashboard/notifications",
       "/dashboard/evals",
+      "/dashboard/metrics",
     ],
     detailLists: ["/dashboard/ailments", "/dashboard/evals"],
     forbidden: [],
   },
   admin: {
     email: "admin@clinic.local",
-    pages: ["/dashboard", "/dashboard/admin/users", "/dashboard/notifications", "/dashboard/evals"],
+    pages: ["/dashboard", "/dashboard/admin/users", "/dashboard/notifications", "/dashboard/evals", "/dashboard/metrics"],
     detailLists: ["/dashboard/evals"],
     forbidden: [],
   },
@@ -60,7 +61,7 @@ const ROLES = {
 
 // Where a role that is turned away from a page should end up, and text that only eval pages contain.
 const ALLOWED_LANDING = ["/dashboard", "/dashboard/ailments"]
-const EVAL_CONTENT = ["Run an eval", "Eval Verdict", "golden scenarios"]
+const EVAL_CONTENT = ["Run an eval", "Eval Verdict", "golden scenarios", "Median loop time", "Quality across versions", "Regressions detected"]
 
 // Links on a list page that point at a detail page: an id segment of 20+ lowercase letters and digits.
 const DETAIL_LINK = /\/dashboard\/(ailments|evals)\/[a-z0-9]{20,}$/

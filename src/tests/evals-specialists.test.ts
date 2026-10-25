@@ -33,6 +33,18 @@ describe("specialist registry", () => {
   it("gives every version a summary", () => {
     for (const s of SPECIALIST_VERSIONS) expect(s.summary.length).toBeGreaterThan(10)
   })
+
+  it("gives every version a valid release date", () => {
+    for (const s of SPECIALIST_VERSIONS) {
+      expect(s.releasedAt).toBeInstanceOf(Date)
+      expect(Number.isNaN(s.releasedAt.getTime())).toBe(false)
+    }
+  })
+
+  it("lists versions in non-decreasing release order, so registry order is release order", () => {
+    const times = listVersions(INTAKE_TRIAGE_ID).map((s) => s.releasedAt.getTime())
+    expect(times).toEqual([...times].sort((a, b) => a - b))
+  })
 })
 
 describe.each([["v1", v1], ["v2", v2]])("specialist %s", (_name, specialist) => {

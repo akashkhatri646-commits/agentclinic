@@ -16,8 +16,10 @@ function VerdictBadge({ verdict }: { verdict: string }) {
   return <span className={`badge badge-verdict-${verdict.toLowerCase()}`}>{verdict}</span>
 }
 
-function source(triggeredBy: string | null): string {
-  if (triggeredBy === "seed" || triggeredBy === "cli") return triggeredBy
+/** Sample runs have illustrative timings, so say so; otherwise show where the run came from. */
+function source(run: { triggeredBy: string | null; isSample: boolean }): string {
+  if (run.isSample) return "sample"
+  if (run.triggeredBy === "seed" || run.triggeredBy === "cli") return run.triggeredBy
   return "app"
 }
 
@@ -112,7 +114,7 @@ export default async function EvalsPage({ searchParams }: { searchParams: { erro
                     </td>
                     <td>{formatPercent(rate(r.devPassed, r.devTotal))}</td>
                     <td>{formatPercent(rate(r.holdoutPassed, r.holdoutTotal))}</td>
-                    <td>{source(r.triggeredBy)}</td>
+                    <td>{source(r)}</td>
                     <td>
                       {r.createdAt.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
                     </td>

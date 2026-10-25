@@ -17,6 +17,15 @@ export async function getEvalRunById(id: string) {
   })
 }
 
+/** Every run of a specialist with just the per-scenario outcome the metrics need. */
+export async function getRunsForMetrics(specialistId: string) {
+  return prisma.evalRun.findMany({
+    where: { specialistId },
+    orderBy: { createdAt: "asc" },
+    include: { results: { select: { scenarioId: true, passed: true } } },
+  })
+}
+
 export async function getLatestRunForVersion(specialistId: string, version: string) {
   return prisma.evalRun.findFirst({
     where: { specialistId, version },

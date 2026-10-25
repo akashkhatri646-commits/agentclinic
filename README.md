@@ -10,17 +10,21 @@ The clinic is the environment under test. The product thinking is in how to run 
 |---|---|
 | ![Staff dashboard](docs/screenshots/staff-dashboard.png) | ![Notifications](docs/screenshots/notifications.png) |
 
+| Metrics: pass rate across versions (the loop times shown are illustrative sample data) |
+|---|
+| ![Metrics page with the pass-rate chart and per-version table](docs/screenshots/metrics.png) |
+
 ## What's here
 
 | Area | Status | Where |
 |---|---|---|
 | Clinic app: auth, roles, agents, ailments, therapies, appointment booking, staff dashboard, discharge, in-app notifications | Built (Phases 1–6) | `src/`, `prisma/` |
 | Eval harness and quality verdicts: a versioned Intake Triage specialist, 32 golden scenarios with a hold-out set, deterministic checks, an optional LLM judge, and a PASS/FAIL verdict with version comparison | Built (Phase 7) | `src/lib/evals/`, `scripts/eval.ts`, `/dashboard/evals` |
-| Loop-time and quality metrics | Planned (Phase 8) | `specs/strategy.md` |
+| Loop-time and quality metrics: change, start and verdict timestamps on every run; median loop time against a target; pass rate per version; scenarios fixed and regressions detected; a hill-climbing chart | Built (Phase 8) | `src/lib/evals/metrics.ts`, `/dashboard/metrics` |
 | Failure triage to ranked fix backlog | Planned (Phase 9) | `specs/strategy.md` |
 | Self-serve onboarding and playbook | Planned (Phase 10) | `specs/strategy.md` |
 
-Phases 8 to 10 are planned: they are proposals and are not implemented yet.
+Phases 9 and 10 are planned: they are proposals and are not implemented yet.
 
 ## How the clinic maps to the loop
 
@@ -68,6 +72,11 @@ npm run eval -- --judge           # also score rationales with the LLM judge (ne
 
 `v1` is a baseline with known gaps and returns FAIL (exit code 1); `v2` fixes most of them and returns PASS. A run passes when the dev pass rate is at least 85% and the hold-out rate is within 10 points of dev. The LLM judge is optional and off by default; everything else runs with no API key or network.
 
+## Metrics
+
+`/dashboard/metrics` (staff and admin) shows how quickly a shipped change gets a verdict and how quality moves between versions: median loop time against a 3-day target, the baseline and latest loop times, pass rate per version, scenarios fixed and regressions detected, and a chart of dev and hold-out pass rate across versions. A median loop time tile is also on the staff dashboard.
+
+**The seeded timings are illustrative sample data.** To make a fresh install show a weeks-to-days story, the seed records `v1` as taking 21 days to get a verdict and `v2` as taking 2. Those times were invented. The scenario results, pass rates and comparisons on those runs are real, because they come from running the harness. Sample runs are flagged `isSample` and labelled wherever they appear, and any run you start yourself is real and is never flagged.
 ## Accessibility and responsive audit
 
 With the app running on port 3100 and the database seeded (`npm run build`, then `AUTH_TRUST_HOST=true npm start -- -p 3100`), `npm run audit` signs in as each role and checks every page at 375, 768 and 1280 px for horizontal overflow and WCAG 2.1 A/AA violations (axe-core). It also confirms agents cannot open the evals pages. Needs Chrome.
