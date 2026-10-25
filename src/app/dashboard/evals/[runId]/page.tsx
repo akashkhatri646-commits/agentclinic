@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth"
 import { canViewEvals } from "@/lib/guards"
+import { describeJudge } from "@/lib/evals/cli"
 import { getEvalRunById, getPreviousVersionRun } from "@/lib/evals/queries"
 import { INTAKE_TRIAGE_SCENARIOS } from "@/lib/evals/scenarios/intake-triage"
 import { getSpecialistVersion } from "@/lib/evals/specialists"
@@ -125,7 +126,7 @@ export default async function EvalRunPage({ params }: { params: { runId: string 
           </table>
         </figure>
         <small>
-          LLM judge: {run.judgeEnabled ? "enabled" : "disabled"}.
+          LLM judge: {describeJudge(run)}.
           {specialist && <> Version summary: {specialist.summary}</>}
         </small>
       </section>

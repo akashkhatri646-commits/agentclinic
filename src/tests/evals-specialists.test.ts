@@ -109,6 +109,50 @@ describe("v2 fixes", () => {
   })
 })
 
+describe("v2 whole-word therapy matching (review finding #2)", () => {
+  it("does not match 'want' inside 'unwanted' or 'invent' inside 'inventory'", () => {
+    const out = v2.run(input("Unwanted loops in my inventory of tasks."))
+    expect(out.therapy).toBe(THERAPY.PROMPT_DETOX)
+    expect(out.rationale).toContain("general-purpose")
+  })
+
+  it("still matches the whole words and their endings", () => {
+    expect(v2.run(input("I keep making things up.")).therapy).toBe(THERAPY.HALLUCINATION_CBT)
+    expect(v2.run(input("Invented citations again.")).therapy).toBe(THERAPY.HALLUCINATION_CBT)
+    expect(v2.run(input("They wanted something else.")).therapy).toBe(THERAPY.EXPECTATION_RECALIBRATION)
+    expect(v2.run(input("Worried about the token limit.")).therapy).toBe(THERAPY.TOKEN_BUDGET_RELIEF)
+    expect(v2.run(input("Old context bleeds in.")).therapy).toBe(THERAPY.CONTEXT_WINDOW_CLEANSE)
+  })
+
+  it("ignores a therapy keyword that is negated", () => {
+    expect(v2.run(input("I am not making things up.")).therapy).toBe(THERAPY.PROMPT_DETOX)
+    expect(v2.run(input("There is no token problem here.")).therapy).toBe(THERAPY.PROMPT_DETOX)
+  })
+
+  it("quotes the whole word that matched", () => {
+    expect(v2.run(input("Chronic fabrication of sources.")).rationale).toContain('"fabrication"')
+  })
+})
+
+describe("v2 negation stays within a sentence (review finding #1)", () => {
+  it("does not let a negator in an earlier sentence suppress a severity word", () => {
+    expect(v2.run(input("It is not fine. Severe panic every night.")).severity).toBe("HIGH")
+    expect(v2.run(input("It is not fine! Severe panic every night.")).severity).toBe("HIGH")
+    expect(v2.run(input("Nothing is wrong; severe panic every night.")).severity).toBe("HIGH")
+  })
+
+  it("still negates within the same sentence", () => {
+    expect(v2.run(input("It is not severe.")).severity).toBe("LOW")
+    expect(v2.run(input("Not severe, but I over-apologise.")).severity).toBe("LOW")
+  })
+
+  it("does not let a negator in an earlier sentence suppress a therapy keyword", () => {
+    expect(v2.run(input("I am not sure. Hallucination is my problem.")).therapy).toBe(
+      THERAPY.HALLUCINATION_CBT
+    )
+  })
+})
+
 describe("golden scenarios", () => {
   it("has unique ids", () => {
     const ids = INTAKE_TRIAGE_SCENARIOS.map((s) => s.id)

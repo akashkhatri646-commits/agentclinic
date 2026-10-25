@@ -122,3 +122,18 @@ export function compareRuns(current: RunSummary, previous: RunSummary): RunCompa
 
 /** An LLM-judge score below this fails the scenario (scores run 1 to 5). */
 export const JUDGE_PASS_SCORE = 3
+
+/**
+ * How many scenarios the LLM judge was asked about, and how many it actually
+ * scored. A judge that is switched on but fails (bad key, outage) attempts
+ * scenarios and scores none, which must not look like a graded run.
+ * `judgeNote` is set whenever the judge was called, `judgeScore` only when it scored.
+ */
+export function judgeCoverage(
+  results: { judgeScore: number | null; judgeNote: string | null }[]
+): { attempted: number; scored: number } {
+  return {
+    attempted: results.filter((r) => r.judgeNote !== null).length,
+    scored: results.filter((r) => r.judgeScore !== null).length,
+  }
+}

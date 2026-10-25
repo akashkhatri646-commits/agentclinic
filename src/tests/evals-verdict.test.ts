@@ -5,6 +5,7 @@ import {
   compareRuns,
   computeVerdict,
   formatPercent,
+  judgeCoverage,
   rate,
   summariseFailures,
 } from "../lib/evals/verdict"
@@ -139,5 +140,22 @@ describe("compareRuns", () => {
     const diff = compareRuns(run(5, 1, []), empty)
     expect(diff.devDelta).toBeNull()
     expect(diff.holdoutDelta).toBeNull()
+  })
+})
+
+describe("judgeCoverage", () => {
+  it("counts scenarios the judge was asked about and those it scored", () => {
+    expect(
+      judgeCoverage([
+        { judgeScore: 5, judgeNote: "ok" },
+        { judgeScore: null, judgeNote: "Judge unavailable: boom" },
+        { judgeScore: null, judgeNote: null }, // never asked: failed the deterministic checks
+      ])
+    ).toEqual({ attempted: 2, scored: 1 })
+  })
+
+  it("is zero for a run with no judge", () => {
+    expect(judgeCoverage([{ judgeScore: null, judgeNote: null }])).toEqual({ attempted: 0, scored: 0 })
+    expect(judgeCoverage([])).toEqual({ attempted: 0, scored: 0 })
   })
 })

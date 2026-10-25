@@ -58,6 +58,10 @@ const ROLES = {
   },
 }
 
+// Where a role that is turned away from a page should end up, and text that only eval pages contain.
+const ALLOWED_LANDING = ["/dashboard", "/dashboard/ailments"]
+const EVAL_CONTENT = ["Run an eval", "Eval Verdict", "golden scenarios"]
+
 // Links on a list page that point at a detail page: an id segment of 20+ lowercase letters and digits.
 const DETAIL_LINK = /\/dashboard\/(ailments|evals)\/[a-z0-9]{20,}$/
 
@@ -130,11 +134,19 @@ async function main() {
         }
 
         if (width === 1280) {
+          // A blocked role must land on a normal page of the app (not /login or an error page)
+          // and must not be shown any eval content on the way.
           for (const page of cfg.forbidden) {
             await driver.get(BASE + page)
             await driver.sleep(800)
-            const path_ = new URL(await driver.getCurrentUrl()).pathname
-            if (path_.startsWith(page)) accessFailures.push(`${role} could open ${page}`)
+            const landed = new URL(await driver.getCurrentUrl()).pathname
+            const text = await driver.executeScript("return document.body.innerText")
+            if (!ALLOWED_LANDING.includes(landed)) {
+              accessFailures.push(`${role} opening ${page} ended up on ${landed}, expected one of ${ALLOWED_LANDING.join(", ")}`)
+            }
+            if (EVAL_CONTENT.some((marker) => text.includes(marker))) {
+              accessFailures.push(`${role} was shown eval content when opening ${page}`)
+            }
           }
         }
       } finally {

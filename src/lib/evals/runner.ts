@@ -1,10 +1,9 @@
 import type { PrismaClient } from "@prisma/client"
-import { prisma } from "../prisma"
 import { runChecks } from "./checks"
 import { getScenarios } from "./scenarios/intake-triage"
 import { getSpecialistVersion } from "./specialists"
 import type { FailureCategory, Judge, Scenario } from "./types"
-import { JUDGE_PASS_SCORE, computeVerdict } from "./verdict"
+import { JUDGE_PASS_SCORE, computeVerdict, judgeCoverage } from "./verdict"
 
 /** The slice of the database client the runner needs, so a seed script or test can supply its own. */
 export type EvalDb = Pick<PrismaClient, "therapy" | "evalRun">
@@ -40,10 +39,14 @@ type ResultRow = {
  * stores the run with all its results in a single nested write.
  */
 export async function runEval(options: RunEvalOptions) {
-  const { specialistId, version, triggeredBy = null, judge = null, db = prisma } = options
+  const { specialistId, version, triggeredBy = null, judge = null } = options
 
   const specialist = getSpecialistVersion(specialistId, version)
   if (!specialist) throw new Error(`Unknown specialist version: ${specialistId} ${version}.`)
+
+  // The shared client is loaded only when the caller did not supply one, so a
+  // seed script or test that passes its own never constructs a second client.
+  const db = options.db ?? (await import("../prisma")).prisma
 
   const scenarios = getScenarios(specialistId)
   const catalogue = (await db.therapy.findMany({ select: { name: true } })).map((t) => t.name)
@@ -100,10 +103,18 @@ export async function runEval(options: RunEvalOptions) {
     holdoutPassed: holdout.filter((r) => r.passed).length,
   }
   const { verdict, reason } = computeVerdict(counts)
-  const verdictReason =
+  let verdictReason =
     catalogue.length === 0
       ? `The therapy catalogue is empty, so no recommendation can be valid. ${reason}`
       : reason
+
+  // A judge that was switched on but could not score must not look like a graded run.
+  if (judge) {
+    const { attempted, scored } = judgeCoverage(rows)
+    if (attempted > 0 && scored < attempted) {
+      verdictReason += ` The LLM judge was enabled but scored only ${scored} of ${attempted} rationales, so the rest were not graded.`
+    }
+  }
 
   return db.evalRun.create({
     data: {

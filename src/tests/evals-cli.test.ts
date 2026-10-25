@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { formatRunReport, parseEvalArgs } from "../lib/evals/cli"
+import { describeJudge, formatRunReport, parseEvalArgs } from "../lib/evals/cli"
 
 describe("parseEvalArgs", () => {
   it("defaults to all versions with no judge", () => {
@@ -80,5 +80,49 @@ describe("formatRunReport", () => {
 
   it("shows n/a for an empty split", () => {
     expect(formatRunReport({ ...base, holdoutPassed: 0, holdoutTotal: 0 })).toContain("hold-out 0/0 (n/a)")
+  })
+})
+
+describe("describeJudge (review finding #3)", () => {
+  const scored = { scenarioId: "a", split: "DEV", passed: true, category: null, reason: null, judgeScore: 4, judgeNote: "ok" }
+  const failedToScore = { ...scored, scenarioId: "b", judgeScore: null, judgeNote: "Judge unavailable: boom" }
+
+  it("is 'disabled' when the judge was off", () => {
+    expect(describeJudge({ judgeEnabled: false, results: [scored] })).toBe("disabled")
+  })
+
+  it("reports full coverage", () => {
+    expect(describeJudge({ judgeEnabled: true, results: [scored, scored] })).toBe("enabled, 2 of 2 scored")
+  })
+
+  it("warns when the judge was on but scored fewer than it was asked about", () => {
+    const text = describeJudge({ judgeEnabled: true, results: [scored, failedToScore] })
+    expect(text).toContain("only 1 of 2 scored")
+    expect(text).toContain("NOT graded")
+  })
+
+  it("warns when nothing was scored", () => {
+    expect(describeJudge({ judgeEnabled: true, results: [failedToScore, failedToScore] })).toContain("only 0 of 2 scored")
+  })
+
+  it("does not warn when the judge was never asked", () => {
+    const neverAsked = { ...scored, judgeScore: null, judgeNote: null }
+    expect(describeJudge({ judgeEnabled: true, results: [neverAsked] })).toBe("enabled, 0 of 0 scored")
+  })
+
+  it("appears in the terminal report", () => {
+    const run = {
+      specialistId: "intake-triage",
+      version: "v2",
+      verdict: "PASS",
+      verdictReason: "ok",
+      devPassed: 1,
+      devTotal: 1,
+      holdoutPassed: 0,
+      holdoutTotal: 0,
+      judgeEnabled: true,
+      results: [failedToScore],
+    }
+    expect(formatRunReport(run)).toContain("LLM judge: enabled, but only 0 of 1 scored")
   })
 })

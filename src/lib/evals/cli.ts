@@ -1,4 +1,4 @@
-import { formatPercent, rate } from "./verdict"
+import { formatPercent, judgeCoverage, rate } from "./verdict"
 
 export type EvalArgs =
   | { ok: true; versions: string[] | null; judge: boolean; help: boolean }
@@ -46,7 +46,26 @@ type ReportRun = {
   holdoutPassed: number
   holdoutTotal: number
   judgeEnabled: boolean
-  results: { scenarioId: string; split: string; passed: boolean; category: string | null; reason: string | null }[]
+  results: {
+    scenarioId: string
+    split: string
+    passed: boolean
+    category: string | null
+    reason: string | null
+    judgeScore?: number | null
+    judgeNote?: string | null
+  }[]
+}
+
+/** "disabled", or how much of the judge's work actually produced scores. */
+export function describeJudge(run: Pick<ReportRun, "judgeEnabled" | "results">): string {
+  if (!run.judgeEnabled) return "disabled"
+  const { attempted, scored } = judgeCoverage(
+    run.results.map((r) => ({ judgeScore: r.judgeScore ?? null, judgeNote: r.judgeNote ?? null }))
+  )
+  return scored < attempted
+    ? `enabled, but only ${scored} of ${attempted} scored; the rest were NOT graded`
+    : `enabled, ${scored} of ${attempted} scored`
 }
 
 /** Plain-text summary of one run for the terminal. */
@@ -56,7 +75,7 @@ export function formatRunReport(run: ReportRun): string {
     `  dev ${run.devPassed}/${run.devTotal} (${formatPercent(rate(run.devPassed, run.devTotal))})` +
       `   hold-out ${run.holdoutPassed}/${run.holdoutTotal} (${formatPercent(rate(run.holdoutPassed, run.holdoutTotal))})`,
     `  ${run.verdictReason}`,
-    `  LLM judge: ${run.judgeEnabled ? "enabled" : "disabled"}`,
+    `  LLM judge: ${describeJudge(run)}`,
   ]
   const failed = run.results.filter((r) => !r.passed)
   if (failed.length > 0) {

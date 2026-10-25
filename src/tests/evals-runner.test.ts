@@ -5,7 +5,12 @@ import { INTAKE_TRIAGE_SCENARIOS } from "../lib/evals/scenarios/intake-triage"
 import { SEEDED_THERAPY_NAMES, THERAPY } from "../lib/evals/catalogue"
 import type { Judge } from "../lib/evals/types"
 
-vi.mock("../lib/prisma", () => ({ prisma: {} }))
+// The factory runs only if the module is actually imported, so this records whether the runner loaded the shared client.
+const prismaLoaded = vi.hoisted(() => vi.fn())
+vi.mock("../lib/prisma", () => {
+  prismaLoaded()
+  return { prisma: {} }
+})
 
 type CreateArgs = { data: Record<string, unknown> & { results: { create: Record<string, unknown>[] } } }
 
@@ -107,6 +112,25 @@ describe("shipped specialist versions (pins the demo story)", () => {
   })
 })
 
+describe("database client (review finding #6)", () => {
+  beforeEach(() => prismaLoaded.mockClear())
+
+  it("does not load the shared client when one is supplied", async () => {
+    await run("v2").promise
+    expect(prismaLoaded).not.toHaveBeenCalled()
+  })
+
+  it("does not load the shared client for an unknown version", async () => {
+    await expect(runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v9" })).rejects.toThrow("Unknown")
+    expect(prismaLoaded).not.toHaveBeenCalled()
+  })
+
+  it("loads the shared client only when none is supplied", async () => {
+    await expect(runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v2" })).rejects.toThrow()
+    expect(prismaLoaded).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe("environment handling", () => {
   it("fails scenarios whose therapy was removed from the catalogue, without crashing", async () => {
     const fake = fakeDb(SEEDED_THERAPY_NAMES.filter((n) => n !== THERAPY.TOKEN_BUDGET_RELIEF))
@@ -177,6 +201,40 @@ describe("optional judge", () => {
     expect(row.judgeScore).toBeNull()
     expect(row.judgeNote).toContain("Judge unavailable: network down")
     expect(r.verdict).toBe("PASS")
+  })
+
+  it("says so in the verdict reason when the judge is on but scores nothing (review finding #3)", async () => {
+    judge.score.mockRejectedValue(new Error("401 invalid key"))
+    const r = await run("v2", { judge }).promise
+    expect(r.judgeEnabled).toBe(true)
+    expect(r.verdictReason).toContain("scored only 0 of 29 rationales")
+    expect(r.verdictReason).toContain("not graded")
+  })
+
+  it("says so when the judge scores only some rationales", async () => {
+    let calls = 0
+    judge.score.mockImplementation(async () =>
+      ++calls % 2 === 0 ? { score: null, note: "Malformed reply." } : { score: 5, note: "Grounded." }
+    )
+    const r = await run("v2", { judge }).promise
+    expect(r.verdictReason).toContain("scored only 15 of 29 rationales")
+  })
+
+  it("adds no warning when the judge scored everything it was asked about", async () => {
+    const r = await run("v2", { judge }).promise
+    expect(r.verdictReason).not.toContain("not graded")
+  })
+
+  it("adds no warning when the judge was never asked (every scenario failed the checks)", async () => {
+    const fake = fakeDb([])
+    const r = await runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v2", db: fake.db, judge })
+    expect(judge.score).not.toHaveBeenCalled()
+    expect(r.verdictReason).not.toContain("not graded")
+  })
+
+  it("adds no warning when no judge is used", async () => {
+    const r = await run("v2").promise
+    expect(r.verdictReason).not.toContain("judge")
   })
 
   it("is non-fatal when the judge returns no score", async () => {
