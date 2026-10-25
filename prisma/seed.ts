@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 import { runEval } from "../src/lib/evals/runner"
+import { SAMPLE_TIMING } from "../src/lib/evals/sample-data"
 import { INTAKE_TRIAGE_ID, listVersions } from "../src/lib/evals/specialists"
 
 const prisma = new PrismaClient()
@@ -229,12 +230,21 @@ async function main() {
   console.log("  seeded 4 notifications")
 
   // ─── Eval runs ───────────────────────────────────────────────────────────
-  // Real runs of the harness against the therapies just seeded, so the eval
-  // pages are not empty on a fresh install. Runs v1 then v2, in release order.
+  // Real runs of the harness against the therapies just seeded, so the eval and
+  // metrics pages are not empty on a fresh install. Runs v1 then v2, in release order.
+  // The scenario results are real; the TIMESTAMPS come from SAMPLE_TIMING, which is
+  // illustrative (see src/lib/evals/sample-data.ts), so those runs are flagged isSample.
   await prisma.evalRun.deleteMany({})
   for (const { version } of listVersions(INTAKE_TRIAGE_ID)) {
-    const run = await runEval({ specialistId: INTAKE_TRIAGE_ID, version, triggeredBy: "seed", db: prisma })
-    console.log(`  seeded eval run: ${INTAKE_TRIAGE_ID} ${version} ${run.verdict}`)
+    const timing = SAMPLE_TIMING[version]
+    const run = await runEval({
+      specialistId: INTAKE_TRIAGE_ID,
+      version,
+      triggeredBy: "seed",
+      db: prisma,
+      ...(timing ? { timing, isSample: true } : {}),
+    })
+    console.log(`  seeded eval run: ${INTAKE_TRIAGE_ID} ${version} ${run.verdict}${timing ? " (sample timing)" : ""}`)
   }
 
 }
