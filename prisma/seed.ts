@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
+import { runEval } from "../src/lib/evals/runner"
+import { INTAKE_TRIAGE_ID, listVersions } from "../src/lib/evals/specialists"
 
 const prisma = new PrismaClient()
 
@@ -225,6 +227,16 @@ async function main() {
     ],
   })
   console.log("  seeded 4 notifications")
+
+  // ─── Eval runs ───────────────────────────────────────────────────────────
+  // Real runs of the harness against the therapies just seeded, so the eval
+  // pages are not empty on a fresh install. Runs v1 then v2, in release order.
+  await prisma.evalRun.deleteMany({})
+  for (const { version } of listVersions(INTAKE_TRIAGE_ID)) {
+    const run = await runEval({ specialistId: INTAKE_TRIAGE_ID, version, triggeredBy: "seed", db: prisma })
+    console.log(`  seeded eval run: ${INTAKE_TRIAGE_ID} ${version} ${run.verdict}`)
+  }
+
 }
 
 main()
