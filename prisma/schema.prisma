@@ -94,8 +94,14 @@ model EvalRun {
   verdict        String       // PASS | FAIL
   verdictReason  String
   judgeEnabled   Boolean      @default(false)
-  triggeredBy    String?      // user id, or "cli"
+  triggeredBy    String?      // user id, "cli" or "seed"
   createdAt      DateTime     @default(now())
+  // Loop-time timestamps. changeShippedAt is copied from the specialist version's
+  // releasedAt when the run is made; it is empty for runs from before Phase 8.
+  changeShippedAt DateTime?
+  startedAt       DateTime?
+  finishedAt      DateTime?   // when the verdict was produced
+  isSample        Boolean     @default(false) // illustrative seed data, never set for real runs
   results        EvalResult[]
 
   @@index([specialistId, version, createdAt])

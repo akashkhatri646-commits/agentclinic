@@ -38,6 +38,8 @@ function run({ description }: { description: string }): SpecialistOutput {
 export const intakeTriageV1: SpecialistVersion = {
   specialistId: INTAKE_TRIAGE_ID,
   version: "v1",
+  // Approximate: v1 and v2 were both written on 2026-10-25, the day Phase 7 was built.
+  releasedAt: new Date("2026-10-25T09:00:00Z"),
   summary: "Baseline keyword rules. Known gaps: negation, persistent/chronic wording, softening words, human-expectation therapy, fabrication synonyms.",
   run,
 }

@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { runEval, type EvalDb } from "../lib/evals/runner"
-import { INTAKE_TRIAGE_ID } from "../lib/evals/specialists"
+import { INTAKE_TRIAGE_ID, getSpecialistVersion } from "../lib/evals/specialists"
 import { INTAKE_TRIAGE_SCENARIOS } from "../lib/evals/scenarios/intake-triage"
 import { SEEDED_THERAPY_NAMES, THERAPY } from "../lib/evals/catalogue"
 import type { Judge } from "../lib/evals/types"
@@ -109,6 +109,86 @@ describe("shipped specialist versions (pins the demo story)", () => {
   it("v2 gets d23, d24 and h08 wrong and nothing else", async () => {
     const r = await run("v2").promise
     expect(r.results.filter((x) => !x.passed).map((x) => x.scenarioId)).toEqual(["d23", "d24", "h08"])
+  })
+})
+
+describe("loop-time timestamps (Phase 8)", () => {
+  afterEach(() => vi.useRealTimers())
+
+  it("records change shipped, started and finished for a real run", async () => {
+    const before = Date.now()
+    const r = await run("v2").promise
+    expect(r.changeShippedAt).toEqual(getSpecialistVersion(INTAKE_TRIAGE_ID, "v2")!.releasedAt)
+    expect(r.startedAt!.getTime()).toBeGreaterThanOrEqual(before)
+    expect(r.finishedAt!.getTime()).toBeGreaterThanOrEqual(r.startedAt!.getTime())
+    expect(r.changeShippedAt!.getTime()).toBeLessThanOrEqual(r.startedAt!.getTime())
+  })
+
+  it("never marks a real run as sample", async () => {
+    expect((await run("v2").promise).isSample).toBe(false)
+  })
+
+  it("takes the verdict time after the judge has finished", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-11-01T10:00:00Z"))
+    const slowJudge: Judge = {
+      score: vi.fn(async () => {
+        vi.setSystemTime(Date.now() + 60_000) // each judge call takes a minute
+        return { score: 5, note: "ok" }
+      }),
+    }
+    const r = await run("v2", { judge: slowJudge }).promise
+    expect(r.startedAt!.toISOString()).toBe("2026-11-01T10:00:00.000Z")
+    expect(r.finishedAt!.getTime() - r.startedAt!.getTime()).toBe(29 * 60_000)
+  })
+
+  describe("explicit timing (used by the seed)", () => {
+    const timing = {
+      changeShippedAt: new Date("2026-09-01T09:00:00Z"),
+      startedAt: new Date("2026-09-22T09:00:00Z"),
+      finishedAt: new Date("2026-09-22T09:05:00Z"),
+    }
+
+    it("stores the supplied timestamps and the sample flag", async () => {
+      const r = await run("v1", { timing, isSample: true }).promise
+      expect(r.changeShippedAt).toEqual(timing.changeShippedAt)
+      expect(r.startedAt).toEqual(timing.startedAt)
+      expect(r.finishedAt).toEqual(timing.finishedAt)
+      expect(r.isSample).toBe(true)
+    })
+
+    it("sets createdAt to the finish time so list order and previous-version lookup agree", async () => {
+      const fake = fakeDb()
+      await runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v1", db: fake.db, timing, isSample: true })
+      expect((fake.create.mock.calls[0][0] as CreateArgs).data.createdAt).toEqual(timing.finishedAt)
+    })
+
+    it("leaves createdAt to the database for a real run", async () => {
+      const fake = fakeDb()
+      await runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v1", db: fake.db })
+      expect((fake.create.mock.calls[0][0] as CreateArgs).data).not.toHaveProperty("createdAt")
+    })
+
+    it("rejects a run that starts before its change shipped, and writes nothing", async () => {
+      const fake = fakeDb()
+      await expect(
+        runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v1", db: fake.db, timing: { ...timing, startedAt: new Date("2026-08-01T00:00:00Z") } })
+      ).rejects.toThrow("before its change shipped")
+      expect(fake.create).not.toHaveBeenCalled()
+    })
+
+    it("rejects a run that finishes before it started", async () => {
+      const fake = fakeDb()
+      await expect(
+        runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v1", db: fake.db, timing: { ...timing, finishedAt: new Date("2026-09-21T00:00:00Z") } })
+      ).rejects.toThrow("before it started")
+    })
+
+    it("accepts zero-length stages (shipped, started and finished at the same moment)", async () => {
+      const t = new Date("2026-09-01T09:00:00Z")
+      const r = await run("v1", { timing: { changeShippedAt: t, startedAt: t, finishedAt: t } }).promise
+      expect(r.finishedAt).toEqual(t)
+    })
   })
 })
 

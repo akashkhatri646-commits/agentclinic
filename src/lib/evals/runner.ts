@@ -16,6 +16,13 @@ export type RunEvalOptions = {
   /** Optional rationale judge. Omit to run deterministic checks only. */
   judge?: Judge | null
   db?: EvalDb
+  /**
+   * Overrides the recorded timestamps. Only the seed uses this, to record an
+   * illustrative history. Must be ordered: shipped, then started, then finished.
+   */
+  timing?: { changeShippedAt: Date; startedAt: Date; finishedAt: Date }
+  /** Marks the run as illustrative sample data. Never set for real runs. */
+  isSample?: boolean
 }
 
 type ResultRow = {
@@ -39,10 +46,22 @@ type ResultRow = {
  * stores the run with all its results in a single nested write.
  */
 export async function runEval(options: RunEvalOptions) {
-  const { specialistId, version, triggeredBy = null, judge = null } = options
+  const { specialistId, version, triggeredBy = null, judge = null, timing, isSample = false } = options
 
   const specialist = getSpecialistVersion(specialistId, version)
   if (!specialist) throw new Error(`Unknown specialist version: ${specialistId} ${version}.`)
+
+  if (timing) {
+    if (timing.startedAt < timing.changeShippedAt) {
+      throw new Error("A run cannot start before its change shipped.")
+    }
+    if (timing.finishedAt < timing.startedAt) {
+      throw new Error("A run cannot finish before it started.")
+    }
+  }
+
+  // "Run started": taken before any scenario runs.
+  const startedAt = timing?.startedAt ?? new Date()
 
   // The shared client is loaded only when the caller did not supply one, so a
   // seed script or test that passes its own never constructs a second client.
@@ -116,6 +135,9 @@ export async function runEval(options: RunEvalOptions) {
     }
   }
 
+  // "Verdict produced": taken after the judge (if any) has finished.
+  const finishedAt = timing?.finishedAt ?? new Date()
+
   return db.evalRun.create({
     data: {
       specialistId,
@@ -126,6 +148,14 @@ export async function runEval(options: RunEvalOptions) {
       verdictReason,
       judgeEnabled: judge !== null,
       triggeredBy,
+      // "Change shipped" comes from the version's release date, copied onto the run.
+      changeShippedAt: timing?.changeShippedAt ?? specialist.releasedAt,
+      startedAt,
+      finishedAt,
+      isSample,
+      // With explicit timing, createdAt follows finishedAt so list order and the
+      // previous-version lookup (which use createdAt) agree with the recorded history.
+      ...(timing ? { createdAt: finishedAt } : {}),
       results: { create: rows },
     },
     include: { results: true },
