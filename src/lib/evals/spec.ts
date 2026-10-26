@@ -46,6 +46,13 @@ export type Check =
   | { field: string; type: "nonEmpty" }
 
 export type CheckType = Check["type"]
+/**
+ * The reference lists every customer instance provides. An `inReference` check may only name one of
+ * these: a list no instance provides could never be satisfied, so the specialist could never pass.
+ * Add a name here only together with the lists of every instance (a test checks they agree).
+ */
+export const PROVIDED_REFERENCE_LISTS: readonly string[] = ["therapies"]
+
 export const CHECK_TYPES: CheckType[] = ["equals", "oneOf", "inReference", "nonEmpty"]
 
 export type ThemeDef = { id: string; label: string; description: string }
@@ -170,17 +177,21 @@ function readId(value: unknown, path: string, what: string, errors: Errors): str
 
 /* ───────────────────────── validation ───────────────────────── */
 
-export function validateSpecialistConfig(text: string): ValidationResult {
+/**
+ * `maxBytes` defaults to the limit for text a person submits. Re-reading a stored definition passes a
+ * higher one, because the rebuilt text carries defaulted keys the submitted text did not.
+ */
+export function validateSpecialistConfig(text: string, maxBytes: number = LIMITS.maxBytes): ValidationResult {
   const errors = new Errors()
 
   if (typeof text !== "string" || text.trim() === "") {
     return { ok: false, errors: [{ path: "", message: "The config is empty. Paste or upload a JSON document." }] }
   }
   const bytes = new TextEncoder().encode(text).length
-  if (bytes > LIMITS.maxBytes) {
+  if (bytes > maxBytes) {
     return {
       ok: false,
-      errors: [{ path: "", message: `The config is ${Math.ceil(bytes / 1024)} KB, over the ${LIMITS.maxBytes / 1024} KB limit.` }],
+      errors: [{ path: "", message: `The config is ${Math.ceil(bytes / 1024)} KB, over the ${maxBytes / 1024} KB limit.` }],
     }
   }
 
@@ -267,7 +278,9 @@ export function validateSpecialistConfig(text: string): ValidationResult {
         checks.push({ field: c.field, type, values: texts as string[] })
       } else if (type === "inReference") {
         const listName = readId(c.list, `${path}.list`, "reference list name", errors)
-        if (listName !== null) checks.push({ field: c.field, type, list: listName })
+        if (listName !== null && !PROVIDED_REFERENCE_LISTS.includes(listName)) {
+          errors.add(`${path}.list`, `${quote(listName)} is not a list any customer instance provides (available: ${PROVIDED_REFERENCE_LISTS.join(", ")})`)
+        } else if (listName !== null) checks.push({ field: c.field, type, list: listName })
       } else {
         checks.push({ field: c.field, type: type as "equals" | "nonEmpty" })
       }

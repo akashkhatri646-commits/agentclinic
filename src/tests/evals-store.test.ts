@@ -89,6 +89,13 @@ describe("instances", () => {
     expect((await listInstances(db(rows))).map((r) => r.slug)).toEqual([STANDARD_INSTANCE, "b", "c"])
   })
 
+  it("keeps a stored __proto__ key as a plain entry instead of changing the lists' prototype", () => {
+    const lists = parseReferenceLists('{"__proto__":["x"],"therapies":["a"]}')!
+    expect(Object.getPrototypeOf(lists)).toBe(Object.prototype)
+    expect(Object.keys(lists).sort()).toEqual(["__proto__", "therapies"])
+    expect(lists.therapies).toEqual(["a"])
+  })
+
   it.each([[null, null], ["", null], ["not json", {}], ["[1]", {}], ['"x"', {}], ['{"a":["x",1,"y"],"b":"no"}', { a: ["x", "y"] }]])(
     "reads stored lists %j as %j",
     (text, expected) => {
@@ -152,6 +159,13 @@ describe("stored specialists", () => {
     const rebuilt = rowToSpec(rowFrom(spec))
     expect(rebuilt).toEqual(spec)
     expect(rebuilt.scenarios[0].id).toBe("d01")
+  })
+
+  it("reads back a definition larger than the limit for submitted text (defaults are added on the way back)", () => {
+    const long = { ...spec, scenarios: spec.scenarios.map((x) => ({ ...x, input: "word ".repeat(400) })) }
+    const many = { ...long, scenarios: Array.from({ length: 12 }, () => long.scenarios).flat().map((x, i) => ({ ...x, id: `s${i}` })) }
+    expect(JSON.stringify(many).length).toBeGreaterThan(200 * 1024)
+    expect(rowToSpec(rowFrom(many)).scenarios).toHaveLength(144)
   })
 
   it("reports a damaged row instead of trusting it", () => {

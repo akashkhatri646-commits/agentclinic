@@ -86,6 +86,13 @@ describe("inReference", () => {
     expect(runFieldChecks(scenario(), { queue: "billing" }, checks, { queues: [] }).passed).toBe(false)
   })
 
+  it.each([["toString"], ["constructor"], ["isPrototypeOf"], ["hasOwnProperty"], ["__proto__"]])("a list named %j that the environment does not provide fails clearly instead of throwing", (name) => {
+    const named = spec([{ field: "queue", type: "inReference", list: name }])
+    const r = runFieldChecks(scenario(), { queue: "billing" }, named, lists)
+    expect(r.passed).toBe(false)
+    expect(r.reason).toContain(`no "${name}" list`)
+  })
+
   it("does not let a value pass by being an inherited object property", () => {
     expect(runFieldChecks(scenario(), { queue: "constructor" }, checks, lists).passed).toBe(false)
   })
@@ -186,7 +193,14 @@ describe("gradeOutputs", () => {
       const judge = judgeWith(async () => ({ score: 5, note: "good" }))
       await gradeOutputs({ spec: grading, outputs, lists: {}, judge })
       expect(judge.score).toHaveBeenCalledTimes(2) // d1 and h1; d2 already failed
-      expect(judge.score).toHaveBeenCalledWith("Some input", "ok")
+      expect(judge.score).toHaveBeenCalledWith("Some input", "ok", { field: "rationale", description: "" })
+    })
+
+    it("tells the judge which field it is judging and what the field is for", async () => {
+      const judge = judgeWith(async () => ({ score: 5, note: "good" }))
+      const outputFields = [{ name: "rationale", description: "Why the queue was chosen." }]
+      await gradeOutputs({ spec: { ...grading, outputFields }, outputs, lists: {}, judge })
+      expect(judge.score).toHaveBeenCalledWith("Some input", "ok", { field: "rationale", description: "Why the queue was chosen." })
     })
 
     it("is not used when the spec names no judge field", async () => {

@@ -58,7 +58,7 @@ npm run dev
 
 Open http://localhost:3000. Run tests with `npm test`.
 
-After pulling a new version, run `npx prisma migrate deploy` and then `npx prisma db seed` again: Phase 10 moved the specialists, scenarios and instances into the database, and the seed creates them. The seed resets the demo data, so it is not for a database you want to keep.
+**After pulling a new version** of a database you want to keep, run `npx prisma migrate deploy` and then `npm run db:upgrade`. Phase 10 moved the specialists, scenarios and customer instances into the database; the upgrade adds the built-in specialist, its versions and the instances, and never touches your runs, failure modes or fixes (it is safe to run again). `npx prisma db seed` does the same for a fresh database but also resets the demo data, so do not use it on one you want to keep.
 
 ## Run the evals
 

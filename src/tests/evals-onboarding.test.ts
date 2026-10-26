@@ -11,7 +11,7 @@ import {
   summariseOnboarding,
   type OnboardingFacts,
 } from "../lib/evals/onboarding"
-import { buildFacts } from "../lib/evals/onboarding-queries"
+import { buildFacts, loadOnboardingFacts } from "../lib/evals/onboarding-queries"
 import { DAY_MS } from "../lib/evals/metrics"
 
 const d = (iso: string) => new Date(iso)
@@ -120,6 +120,12 @@ describe("isAssisted", () => {
 
   it("counts an admin acting at the very moment of verification", () => {
     expect(isAssisted(facts({ ...base, acts: [act("someone", "ADMIN", "2026-10-10T00:00:00Z")] }))).toBe(true)
+  })
+
+  it("counts every admin act when a verified fix has no recorded time", () => {
+    const undated = { id: "f", status: "VERIFIED", verifiedAt: null }
+    expect(isAssisted(facts({ runs: [run("2026-10-03T00:00:00Z")], fixes: [undated], acts: [act("someone", "ADMIN", "2026-10-02T00:00:00Z")] }))).toBe(true)
+    expect(firstVerifiedAt(facts({ fixes: [undated] }))!.getTime()).toBeGreaterThan(Date.UTC(3000, 0, 1))
   })
 
   it("ignores an admin acting after the first verified fix", () => {
@@ -251,5 +257,30 @@ describe("buildFacts", () => {
       fixEvents: [], users,
     })
     expect(summariseOnboarding(f)).toMatchObject({ onboarded: true, assisted: true })
+  })
+})
+
+describe("loadOnboardingFacts", () => {
+  const empty = async () => []
+  function fakeDb() {
+    const calls: Record<string, unknown> = {}
+    const table = (name: string) => ({ findMany: async (args: unknown) => { calls[name] = args; return [] } })
+    const db = { specialist: table("specialist"), evalRun: table("evalRun"), fix: table("fix"), fixEvent: table("fixEvent"), user: { findMany: empty } }
+    return { db: db as unknown as Parameters<typeof loadOnboardingFacts>[0], calls }
+  }
+
+  it("reads everything when no specialist is named", async () => {
+    const { db, calls } = fakeDb()
+    await loadOnboardingFacts(db)
+    for (const name of ["specialist", "evalRun", "fix", "fixEvent"]) expect(calls[name]).not.toHaveProperty("where")
+  })
+
+  it("reads only the named specialist's rows when one is named", async () => {
+    const { db, calls } = fakeDb()
+    await loadOnboardingFacts(db, "ticket-router")
+    expect(calls.specialist).toMatchObject({ where: { slug: "ticket-router" } })
+    expect(calls.evalRun).toMatchObject({ where: { specialistId: "ticket-router" } })
+    expect(calls.fix).toMatchObject({ where: { failureMode: { specialistId: "ticket-router" } } })
+    expect(calls.fixEvent).toMatchObject({ where: { fix: { failureMode: { specialistId: "ticket-router" } } } })
   })
 })

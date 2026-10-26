@@ -59,11 +59,12 @@ export function parseReferenceLists(text: string | null | undefined): ReferenceL
   try {
     const value: unknown = JSON.parse(text)
     if (typeof value !== "object" || value === null || Array.isArray(value)) return {}
-    const lists: ReferenceLists = {}
-    for (const [key, items] of Object.entries(value)) {
-      if (Array.isArray(items)) lists[key] = items.filter((i): i is string => typeof i === "string")
-    }
-    return lists
+    // Built from entries, not by assigning keys, so a stored key of "__proto__" stays a plain entry.
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, items]) => Array.isArray(items))
+        .map(([key, items]) => [key, (items as unknown[]).filter((i): i is string => typeof i === "string")])
+    )
   } catch {
     return {}
   }

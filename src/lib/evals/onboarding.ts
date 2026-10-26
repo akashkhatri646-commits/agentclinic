@@ -47,7 +47,9 @@ export function firstVerdictAt(facts: Pick<OnboardingFacts, "runs">): Date | nul
 }
 
 export function firstVerifiedAt(facts: Pick<OnboardingFacts, "fixes">): Date | null {
-  const times = facts.fixes.filter((f) => f.status === "VERIFIED").map((f) => (f.verifiedAt ?? new Date(0)).getTime())
+  // A verified fix with no recorded time is treated as verified at the end of time, so every act
+  // before it counts: an unknown date must never make a helped specialist look unassisted.
+  const times = facts.fixes.filter((f) => f.status === "VERIFIED").map((f) => (f.verifiedAt ?? new Date(8.64e15)).getTime())
   return times.length === 0 ? null : new Date(Math.min(...times))
 }
 

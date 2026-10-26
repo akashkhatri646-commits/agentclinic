@@ -11,6 +11,7 @@ export type EvalErrorCode =
   | "unknown-version"
   | "unknown-instance"
   | "needs-outputs"
+  | "partial-run"
   | "run-failed"
 
 /**
@@ -23,6 +24,7 @@ export const EVAL_ERROR_MESSAGES: Record<EvalErrorCode, string> = {
   "unknown-version": "That specialist version does not exist.",
   "unknown-instance": "That customer instance does not exist.",
   "needs-outputs": "This version does not run from code. Import its outputs to get a verdict.",
+  "partial-run": "Some runs were saved before one failed. Check the runs list before running again, so nothing is duplicated.",
   "run-failed": "The eval run could not be completed. Please try again.",
 }
 
@@ -69,16 +71,26 @@ export async function startEvalRun(input: {
     // The judge is only used when asked for AND configured; otherwise the checkbox is ignored.
     const judge = input.useJudge && isJudgeConfigured() ? await createAnthropicJudge() : null
     const runIds: string[] = []
-    for (const instance of chosen) {
-      const run = await runEval({
-        specialistId: input.specialist,
-        version: input.version,
-        instance,
-        triggeredBy: input.userId,
-        judge,
-        db,
-      })
-      runIds.push(run.id)
+    try {
+      for (const instance of chosen) {
+        const run = await runEval({
+          specialistId: input.specialist,
+          version: input.version,
+          instance,
+          triggeredBy: input.userId,
+          judge,
+          db,
+        })
+        runIds.push(run.id)
+      }
+    } catch (e) {
+      // Runs already saved stay saved, so say so and record that they happened.
+      if (runIds.length > 0) {
+        console.error("A run on one instance failed after others were saved", e)
+        await recordEvent(db as ServiceDb, specialist.id, "RUN_STARTED", { id: input.userId, role: input.role })
+        return { ok: false, code: "partial-run" }
+      }
+      throw e
     }
     await recordEvent(db as ServiceDb, specialist.id, "RUN_STARTED", { id: input.userId, role: input.role })
     return { ok: true, runId: runIds[runIds.length - 1], runIds }

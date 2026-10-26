@@ -113,6 +113,25 @@ describe("startEvalRun validation", () => {
     spy.mockRestore()
   })
 
+  it("says some runs were saved, and records them, when a later instance fails", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.mocked(runEval).mockResolvedValueOnce({ id: "r1" } as never).mockResolvedValueOnce({ id: "r2" } as never).mockRejectedValueOnce(new Error("judge down"))
+    const db = fakeDb()
+    expect(await startEvalRun({ ...input, instance: ALL_INSTANCES, db })).toEqual({ ok: false, code: "partial-run" })
+    const events = (db as unknown as { specialistEvent: { create: ReturnType<typeof vi.fn> } }).specialistEvent.create
+    expect(events).toHaveBeenCalledTimes(1)
+    spy.mockRestore()
+  })
+
+  it("is a plain failure, with no event, when the very first run fails", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {})
+    vi.mocked(runEval).mockRejectedValueOnce(new Error("db down"))
+    const db = fakeDb()
+    expect(await startEvalRun({ ...input, instance: ALL_INSTANCES, db })).toEqual({ ok: false, code: "run-failed" })
+    expect((db as unknown as { specialistEvent: { create: ReturnType<typeof vi.fn> } }).specialistEvent.create).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
   it("reports run-failed, without throwing, when the runner fails", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {})
     vi.mocked(runEval).mockRejectedValue(new Error("db down"))
@@ -153,6 +172,7 @@ describe("error codes", () => {
     expect(isEvalErrorCode("forbidden")).toBe(true)
     expect(isEvalErrorCode("run-failed")).toBe(true)
     expect(isEvalErrorCode("needs-outputs")).toBe(true)
+    expect(isEvalErrorCode("partial-run")).toBe(true)
     expect(isEvalErrorCode("Your session expired, call support")).toBe(false)
     expect(isEvalErrorCode("toString")).toBe(false)
     expect(isEvalErrorCode("__proto__")).toBe(false)

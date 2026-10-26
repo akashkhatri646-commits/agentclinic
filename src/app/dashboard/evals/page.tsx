@@ -47,7 +47,7 @@ export default async function EvalsPage({
         <header>
           <h2>Evals</h2>
         </header>
-        <EmptyState message="No specialists yet. Create one, or run the database seed, to start evaluating." />
+        <EmptyState message="No specialists yet. Create one, or, on a database from before Phase 10, run npm run db:upgrade." />
         <Link href="/dashboard/specialists/new" role="button">
           Create a specialist
         </Link>

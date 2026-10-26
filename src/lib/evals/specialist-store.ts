@@ -37,6 +37,9 @@ type SpecialistRow = {
   versions: StoredVersion[]
 }
 
+/** 20 times the submitted-text limit: defaults added on reading back can only grow it a little. */
+const STORED_MAX_BYTES = 4 * 1024 * 1024
+
 const parseJson = (text: string): unknown => {
   try {
     return JSON.parse(text)
@@ -67,7 +70,8 @@ export function rowToSpec(row: SpecialistRow): SpecialistSpec {
       why: s.why,
     })),
   }
-  const result = validateSpecialistConfig(JSON.stringify(config))
+  // A stored definition is read back with a generous size limit: the limit is for what a person submits.
+  const result = validateSpecialistConfig(JSON.stringify(config), STORED_MAX_BYTES)
   if (!result.ok) {
     throw new Error(`Specialist "${row.slug}" is stored in a damaged form: ${result.errors[0].path} ${result.errors[0].message}`)
   }

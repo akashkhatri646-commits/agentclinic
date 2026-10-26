@@ -53,8 +53,9 @@ function failureOf(check: Check, scenario: ScenarioSpec, output: OutputValues, l
       }
     }
     case "inReference": {
-      const allowed = lists[check.list]
-      if (!allowed) {
+      // Own properties only: a list called "toString" must not resolve to an inherited function.
+      const allowed = Object.prototype.hasOwnProperty.call(lists, check.list) ? lists[check.list] : undefined
+      if (!Array.isArray(allowed)) {
         return {
           key: `${CATEGORY.inReference}:${check.field}`,
           reason: `this environment has no "${check.list}" list, so ${check.field} cannot be checked against it`,
@@ -120,7 +121,7 @@ export type GradedRun = {
  * returned score below the pass mark does.
  */
 export async function gradeOutputs(input: {
-  spec: Pick<SpecialistSpec, "checks" | "scenarios" | "judge">
+  spec: Pick<SpecialistSpec, "checks" | "scenarios" | "judge"> & Partial<Pick<SpecialistSpec, "outputFields">>
   outputs: Record<string, OutputValues>
   lists: ReferenceLists
   judge?: Judge | null
@@ -139,7 +140,8 @@ export async function gradeOutputs(input: {
     if (judge && spec.judge && outcome.passed) {
       const field = spec.judge.field
       try {
-        const result = await judge.score(scenario.input, text(actual[field]))
+        const description = spec.outputFields?.find((f) => f.name === field)?.description ?? ""
+        const result = await judge.score(scenario.input, text(actual[field]), { field, description })
         judgeScore = result.score
         judgeNote = result.note
         if (result.score !== null && result.score < JUDGE_PASS_SCORE) {

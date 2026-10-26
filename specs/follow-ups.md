@@ -81,7 +81,7 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 
 | Area | Issue | Impact | Suggested fix |
 |---|---|---|---|
-| Instances | The three instances are seeded and fixed; there is no editor, and the standard clinic's reference list is the live therapy catalogue | A team cannot add an environment of its own, and a custom reference list name other than "therapies" has no instance that provides it, so an `inReference` check on it fails with a clear message | An instance editor, and reference lists per specialist |
+| Instances | The three instances are seeded and fixed; there is no editor, and the only reference list they provide is `therapies` (the standard clinic reads the live catalogue). Validation refuses an `inReference` check on any other list name | A team cannot add an environment of its own, and cannot check a field against a list of its own; `oneOf` with the values written out is the workaround | An instance editor, and reference lists per specialist |
 | Definition edits | Replacing the whole definition is the only edit; once there are runs, scenarios, fields, themes and checks can be added but not removed, renamed or moved | Fixing a mistaken scenario id means a new specialist | Edit scenarios one by one with a history, and a way to retire a scenario without losing its results |
 | No deletion | Specialists, versions, instances and runs cannot be deleted or renamed | A test specialist stays forever | Soft delete with an owner or admin confirmation |
 | Value matching | Values are compared as trimmed, case-sensitive text; numbers and booleans become text | "Billing" and "billing" differ; a number is not compared as a number | Optional case-insensitive and numeric checks |
@@ -91,7 +91,9 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 | Dashboard tile | The staff-dashboard loop-time tile shows the first specialist created, not all | With several specialists it is one specialist's number | Choose the specialist, or show a count across them |
 | Imported outputs | The harness trusts the outputs it is given: it cannot tell whether they came from the stated version | A team can import outputs that do not match a real release | Optional: a hash or a signed run record from the team's pipeline |
 | Judge on imported outputs | The judge runs on the configured field of an imported specialist, but is unverified against the real API (as in Phase 7) | Same as Phase 7 | Run it once with a key and record the result |
+| Import and edit races | Importing a new version registers it, runs, and removes it again if the run fails; two people importing the same new label at once get a generic failure, and an edit that removes a scenario can race an import that creates the first run | Needs two people acting in the same instant; the worst case is a rejected import or a result that points at a removed scenario | Do the registration and the run in one transaction, and check for runs inside the edit's transaction |
 | Form race | The paste boxes are uncontrolled text areas, so typing before the page finishes loading is kept; templates, files and a failed attempt replace the text through script | Nothing visible, but a browser with scripts disabled cannot load a template or file into the box | Accept; paste works without scripts |
+| Early click | In the scripted walk, pressing Import within about a second of the page loading was sometimes ignored (no request was sent) until a longer pause was added; typing and clicking by hand has not shown it | A very quick click on a freshly loaded form might need pressing again | Find out whether the form's submit is wired up later than its text box, and disable the button until it is |
 | Edit-time validation | The edit page validates only on submit, so a mistake shows after pressing Save | Slower feedback than inline validation | A "Check" button that validates without saving |
 
 ### Not verified in Phase 10
@@ -99,7 +101,7 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 - The manual flows in `specs/2026-10-26-phase-10-self-serve-onboarding/validation.md` were exercised in headless Chrome (a scripted walk from template to verified fix, the instance spread and the permission checks), not by hand in a browser, and the new pages were not tested with a screen reader.
 - The LLM judge on an imported specialist has not run against the real API.
 - Uploading a file into the paste box was not exercised (the box was filled by script).
-- The migrations were applied to the development database that held Phase 7 to 9 data, with row counts compared; they were not tried on a copy of anyone else's data.
+- The migrations were applied to the development database that held Phase 7 to 9 data, with row counts compared; they were not tried on a copy of anyone else's data. The upgrade path (`migrate deploy`, then `npm run db:upgrade`) was run on a copy of that database with its specialists and instances removed: runs, results, failure modes and fixes were unchanged afterwards and the specialist, instances and versions came back.
 - The playbook has not been followed cold by someone who did not build the app.
 
 ## Design notes

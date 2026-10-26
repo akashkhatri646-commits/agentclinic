@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { LIMITS, SPEC_FORMAT, validateSpecialistConfig, type ValidationError } from "../lib/evals/spec"
+import { LIMITS, PROVIDED_REFERENCE_LISTS, SPEC_FORMAT, validateSpecialistConfig, type ValidationError } from "../lib/evals/spec"
+import { SEEDED_INSTANCES } from "../lib/evals/instances"
 
 /** A small valid config, as an object, so each test can break exactly one thing. */
 const base = (): Record<string, unknown> => ({
@@ -88,7 +89,7 @@ describe("a valid config", () => {
     const r = run(
       with_((c) => {
         c.outputFields.push({ name: "level" }, { name: "owner" })
-        c.checks.push({ field: "level", type: "oneOf", values: ["low", "high"] }, { field: "owner", type: "inReference", list: "people" })
+        c.checks.push({ field: "level", type: "oneOf", values: ["low", "high"] }, { field: "owner", type: "inReference", list: "therapies" })
       })
     )
     expect(r.ok).toBe(true)
@@ -233,6 +234,27 @@ describe("checks", () => {
       expect(e.some((x) => x.path === "checks[2].values")).toBe(true)
     }
   )
+
+  it("refuses an inReference list that no customer instance provides, naming the ones that exist", () => {
+    const e = errorsOf(with_((c) => c.checks.push({ field: "queue", type: "inReference", list: "products" })))
+    expect(has(e, "checks[2].list", '"products" is not a list any customer instance provides (available: therapies)')).toBe(true)
+  })
+
+  it("every seeded instance provides every list a check may name", () => {
+    for (const instance of SEEDED_INSTANCES) {
+      if (instance.referenceLists === null) continue // the standard clinic reads the live catalogue
+      for (const list of PROVIDED_REFERENCE_LISTS) expect(Object.keys(instance.referenceLists)).toContain(list)
+    }
+    expect(PROVIDED_REFERENCE_LISTS).toContain("therapies") // provided live by the standard clinic
+  })
+
+  it("takes a higher size limit when reading a stored definition back", () => {
+    const big = JSON.stringify({ ...base(), description: "x".repeat(LIMITS.maxDescriptionLength), pad: "y".repeat(LIMITS.maxBytes) })
+    expect(validateSpecialistConfig(big).ok).toBe(false)
+    const justOver = JSON.stringify(base()) + " ".repeat(LIMITS.maxBytes)
+    expect(validateSpecialistConfig(justOver).ok).toBe(false)
+    expect(validateSpecialistConfig(justOver, LIMITS.maxBytes * 4).ok).toBe(true)
+  })
 
   it("refuses an inReference check with no list name or a bad one", () => {
     expect(errorsOf(with_((c) => c.checks.push({ field: "queue", type: "inReference" }))).some((e) => e.path === "checks[2].list")).toBe(true)

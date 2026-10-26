@@ -28,12 +28,14 @@ export default async function SpecialistPage({ params }: { params: { slug: strin
       orderBy: { createdAt: "desc" },
       take: 20,
     }),
-    loadOnboardingFacts(prisma),
+    loadOnboardingFacts(prisma, spec.slug),
   ])
   const actorIds = Array.from(new Set(events.map((e) => e.actorId).filter((a): a is string => !!a)))
   const actors = actorIds.length ? await prisma.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, email: true } }) : []
   const actorEmail = new Map(actors.map((a) => [a.id, a.email]))
-  const progress = summariseOnboarding(facts.find((f) => f.slug === spec.slug) ?? facts[0])
+  const ownFacts = facts.find((f) => f.slug === spec.slug)
+  if (!ownFacts) notFound()
+  const progress = summariseOnboarding(ownFacts)
   const canManage = canManageSpecialist(session.user.role, session.user.id, loaded.ownerId)
   const themeLabel = new Map(spec.themes.map((t) => [t.id, t.label]))
   const isSample = loaded.isSample || progress.isSample

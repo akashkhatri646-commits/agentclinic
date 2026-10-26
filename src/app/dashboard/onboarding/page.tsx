@@ -35,7 +35,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: {
     )
   }
 
-  const facts = (await loadOnboardingFacts(prisma)).find((f) => f.slug === selected.slug)
+  const facts = (await loadOnboardingFacts(prisma, selected.slug)).find((f) => f.slug === selected.slug)
   const progress = facts ? summariseOnboarding(facts) : null
   const next = progress?.steps.find((s) => !s.done)
 

@@ -35,7 +35,7 @@ A **check** decides whether a field is right:
 |---|---|---|
 | `equals` | the value equals what the scenario expects | the category is `billing` |
 | `oneOf` | the value is one of a fixed set (`values`) | the level is `low`, `medium` or `high` |
-| `inReference` | the value is in a list the environment provides (`list`) | the therapy exists in this clinic's catalogue |
+| `inReference` | the value is in a list the environment provides (`list`). Today every customer instance provides one list, `therapies`, so that is the only name you can use | the therapy exists in this clinic's catalogue |
 | `nonEmpty` | the value is not blank | a rationale was given |
 
 A scenario passes only if **every** check passes. Values are compared as text, after trimming, and are case-sensitive.
@@ -121,6 +121,7 @@ On the Metrics page, **unassisted** is the share of onboarded specialists where 
 | `scenarios[3].theme "biling" is not one of the themes` | A scenario names a theme you did not define (the message lists the real ones). | Fix the spelling, or add the theme. |
 | `checks[1].field "quee" is not one of the output fields` | A check names a field that does not exist. | Fix the field name. |
 | `scenarios[0].expected.queue is required because queue is checked with "equals"` | A scenario has no expected value for an `equals` field. | Add it. |
+| `checks[1].list "products" is not a list any customer instance provides` | An `inReference` check names a list no instance has, so it could never pass. | Use `therapies`, or use `oneOf` with the values written out. |
 | `scenarios needs at least one scenario with split DEV` | Every scenario is hold-out. | Mark some as `DEV`. |
 | `weight must be 1, 2 or 3` | Weight is out of range. | Use 1, 2 or 3, or leave it out. |
 | `The config is 230 KB, over the 200 KB limit` | Too large. | Up to 200 scenarios, 2,000 characters each. |

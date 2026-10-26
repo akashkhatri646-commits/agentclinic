@@ -60,10 +60,14 @@ export function buildFacts(input: {
   })
 }
 
-/** Facts for every specialist, oldest first. */
-export async function loadOnboardingFacts(db: OnboardingDb): Promise<OnboardingFacts[]> {
+/**
+ * Facts for every specialist, oldest first, or for just one when `only` is a slug: a page about one
+ * specialist should not read every run, fix and event in the database.
+ */
+export async function loadOnboardingFacts(db: OnboardingDb, only?: string): Promise<OnboardingFacts[]> {
   const [specialists, runs, fixes, fixEvents, users] = await Promise.all([
     db.specialist.findMany({
+      ...(only ? { where: { slug: only } } : {}),
       orderBy: { createdAt: "asc" },
       select: {
         slug: true,
@@ -75,9 +79,18 @@ export async function loadOnboardingFacts(db: OnboardingDb): Promise<OnboardingF
         events: { select: { actorId: true, actorRole: true, createdAt: true } },
       },
     }),
-    db.evalRun.findMany({ select: { specialistId: true, createdAt: true, finishedAt: true, triggeredBy: true, isSample: true } }),
-    db.fix.findMany({ select: { id: true, status: true, verifiedAt: true, failureMode: { select: { specialistId: true } } } }),
-    db.fixEvent.findMany({ select: { fixId: true, actorId: true, at: true } }),
+    db.evalRun.findMany({
+      ...(only ? { where: { specialistId: only } } : {}),
+      select: { specialistId: true, createdAt: true, finishedAt: true, triggeredBy: true, isSample: true },
+    }),
+    db.fix.findMany({
+      ...(only ? { where: { failureMode: { specialistId: only } } } : {}),
+      select: { id: true, status: true, verifiedAt: true, failureMode: { select: { specialistId: true } } },
+    }),
+    db.fixEvent.findMany({
+      ...(only ? { where: { fix: { failureMode: { specialistId: only } } } } : {}),
+      select: { fixId: true, actorId: true, at: true },
+    }),
     db.user.findMany({ select: { id: true, role: true } }),
   ])
   return buildFacts({ specialists, runs, fixes, fixEvents, users })

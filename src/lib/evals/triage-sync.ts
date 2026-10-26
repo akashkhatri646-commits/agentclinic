@@ -17,6 +17,8 @@ export type SyncableRun = {
   version: string
   createdAt: Date
   finishedAt: Date | null
+  /** The instance the run was made against. Runs from before Phase 10 have none and read as the standard clinic. */
+  instanceSlug?: string
   results: { scenarioId: string; passed: boolean }[]
 }
 
@@ -62,7 +64,7 @@ export async function syncFailureModes(run: SyncableRun, db: TriageDb): Promise<
   // The run being synced is always part of its own version's state, even if the database
   // has not returned it yet (a caller may pass a run it has not stored in full).
   const merged = mergeLatestPerInstance(
-    versionRuns.length > 0 ? versionRuns : [{ instanceSlug: "standard-clinic", createdAt: run.createdAt, results: run.results }]
+    versionRuns.length > 0 ? versionRuns : [{ instanceSlug: run.instanceSlug ?? "standard-clinic", createdAt: run.createdAt, results: run.results }]
   )
   const previousRun = previousRuns.length > 0 ? { results: mergeLatestPerInstance(previousRuns).results } : null
 
