@@ -1,4 +1,4 @@
-import { isStaff } from "./roles"
+import { isAdmin, isStaff } from "./roles"
 
 /**
  * Authorization rules shared by server actions and pages. They are pure so the
@@ -47,3 +47,15 @@ export const canRunEvals = (role: string): boolean => isStaff(role)
 export const canViewTriage = (role: string): boolean => isStaff(role)
 
 export const canManageTriage = (role: string): boolean => isStaff(role)
+
+/** Specialists, their onboarding and the adoption numbers are for staff and admin; agents never see them. */
+export const canViewSpecialists = (role: string): boolean => isStaff(role)
+
+export const canCreateSpecialist = (role: string): boolean => isStaff(role)
+
+/** The owner or an admin may change a specialist or import its outputs. Another staff member may only look. */
+export function canManageSpecialist(role: string, userId: string, ownerId: string | null | undefined): boolean {
+  return isAdmin(role) || (role === "STAFF" && !!ownerId && ownerId === userId)
+}
+
+export const canImportOutputs = canManageSpecialist

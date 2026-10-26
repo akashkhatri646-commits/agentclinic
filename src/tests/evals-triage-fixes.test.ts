@@ -37,8 +37,14 @@ function mockDb(
   }
   const notification = { create: vi.fn(async () => ({})) }
   const $transaction = vi.fn(async (ops: unknown[]) => ops)
-  const db = { failureMode, fix, fixEvent, user, notification, $transaction } as unknown as FixDb
-  return { db, failureMode, fix, fixEvent, user, notification, $transaction }
+  // Versions v1 and v2 exist for the specialist; anything else is unknown.
+  const specialist = {
+    findFirst: vi.fn(async (args: { where: { versions: { some: { label: string } } } }) =>
+      ["v1", "v2"].includes(args.where.versions.some.label) ? { id: "sp1" } : null
+    ),
+  }
+  const db = { failureMode, fix, fixEvent, user, notification, specialist, $transaction } as unknown as FixDb
+  return { db, failureMode, fix, fixEvent, user, notification, specialist, $transaction }
 }
 
 const staff = { id: "staff-1", role: "STAFF", email: "staff@clinic.local" }

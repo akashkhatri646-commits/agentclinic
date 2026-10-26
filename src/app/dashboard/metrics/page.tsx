@@ -1,7 +1,11 @@
 import { auth } from "@/lib/auth"
 import { canViewEvals } from "@/lib/guards"
-import { getRunsForMetrics } from "@/lib/evals/queries"
-import { INTAKE_TRIAGE_ID, listVersions } from "@/lib/evals/specialists"
+import { getRunsForMetrics, getVersionLabels } from "@/lib/evals/queries"
+import { instanceNames, listInstances } from "@/lib/evals/instances"
+import { pickSpecialist, withSpecialist } from "@/lib/evals/picker"
+import { listSpecialists } from "@/lib/evals/specialist-store"
+import { prisma } from "@/lib/prisma"
+import SpecialistPicker from "@/components/SpecialistPicker"
 import {
   LOOP_TIME_TARGET_LABEL,
   buildMetrics,
@@ -13,6 +17,8 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import EmptyState from "@/components/EmptyState"
 import PassRateChart from "@/components/PassRateChart"
+import { computeAdoption, summariseOnboarding } from "@/lib/evals/onboarding"
+import { loadOnboardingFacts } from "@/lib/evals/onboarding-queries"
 
 export const metadata = { title: "Metrics — AgentClinic" }
 
@@ -27,14 +33,33 @@ const duration = (ms: number | null) => (ms === null ? na : formatDuration(ms))
 const count = (n: number | null) => (n === null ? na : String(n))
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
 
-export default async function MetricsPage() {
+export default async function MetricsPage({ searchParams }: { searchParams: { specialist?: string } }) {
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
   if (!canViewEvals(session.user.role)) redirect("/dashboard")
 
-  const runs = await getRunsForMetrics(INTAKE_TRIAGE_ID)
-  const versions = listVersions(INTAKE_TRIAGE_ID).map((v) => ({ version: v.version }))
+  const specialists = await listSpecialists(prisma)
+  const selected = pickSpecialist(specialists, searchParams.specialist)
+  if (!selected) {
+    return (
+      <article>
+        <header>
+          <h2>Metrics</h2>
+        </header>
+        <EmptyState message="No specialists yet, so there is nothing to measure." actionHref="/dashboard/specialists/new" actionLabel="Create a specialist" />
+      </article>
+    )
+  }
+  const [runs, labels, instances, facts] = await Promise.all([
+    getRunsForMetrics(selected.slug),
+    getVersionLabels(selected.slug),
+    listInstances(prisma),
+    loadOnboardingFacts(prisma),
+  ])
+  const adoption = computeAdoption(facts.map(summariseOnboarding))
+  const versions = labels.map((version) => ({ version }))
   const metrics = buildMetrics(runs, versions)
+  const considered = instanceNames(metrics.instancesConsidered, instances)
   const comparisons = metrics.versions.filter((v) => v.fixed !== null).length
 
   return (
@@ -46,10 +71,12 @@ export default async function MetricsPage() {
         </div>
       </header>
 
+      <SpecialistPicker specialists={specialists} selected={selected.slug} />
+
       {runs.length === 0 ? (
         <EmptyState
           message="No eval runs yet, so there is nothing to measure. Run an eval to get the first numbers."
-          actionHref="/dashboard/evals"
+          actionHref={withSpecialist("/dashboard/evals", selected.slug)}
           actionLabel="Go to Evals"
         />
       ) : (
@@ -105,6 +132,15 @@ export default async function MetricsPage() {
               </p>
             )}
           </section>
+
+          {considered.length > 1 && (
+            <p>
+              <small>
+                Pass rates, scenarios fixed and regressions are the worst case across {considered.join(", ")}: a scenario
+                counts as passing only if it passes on every one of them. Loop time is unaffected.
+              </small>
+            </p>
+          )}
 
           <section aria-labelledby="quality-heading">
             <h3 id="quality-heading">Quality across versions</h3>
@@ -180,6 +216,52 @@ export default async function MetricsPage() {
           </section>
         </>
       )}
+
+      <section aria-labelledby="adoption-heading">
+        <h3 id="adoption-heading">Adoption across all specialists</h3>
+        {adoption.sampleSpecialists > 0 && (
+          <aside className="sample-notice" role="note" aria-label="Sample data notice">
+            <strong>Includes sample data.</strong> {adoption.sampleSpecialists} of {adoption.specialists} specialists are
+            illustrative: their dates and who helped them were made up. Specialists you create yourself are real.
+          </aside>
+        )}
+        <div className="metric-grid">
+          <div className="stat-tile">
+            <p className="stat-label">Specialists</p>
+            <p className="stat-value">{adoption.specialists}</p>
+            <p>
+              <small>{adoption.withVerdict} have reached a verdict</small>
+            </p>
+          </div>
+          <div className="stat-tile">
+            <p className="stat-label">Fully onboarded</p>
+            <p className="stat-value">{adoption.onboarded}</p>
+            <p>
+              <small>A verdict and a fix verified by a later run</small>
+            </p>
+          </div>
+          <div className="stat-tile">
+            <p className="stat-label">Unassisted</p>
+            <p className="stat-value">{adoption.unassistedShare === null ? na : formatPercent(adoption.unassistedShare)}</p>
+            <p>
+              <small>
+                {adoption.unassisted} of {adoption.onboarded} onboarded. Unassisted means no admin other than the owner acted
+                before the first verified fix.
+              </small>
+            </p>
+          </div>
+          <div className="stat-tile">
+            <p className="stat-label">Median time to first verdict</p>
+            <p className="stat-value">{duration(adoption.medianMsToFirstVerdict)}</p>
+            <p>
+              <small>From creating the specialist to its first verdict</small>
+            </p>
+          </div>
+        </div>
+        <small>
+          Unassisted is a proxy for teams running the loop on their own. <Link href="/dashboard/specialists">See the specialists</Link>.
+        </small>
+      </section>
     </article>
   )
 }

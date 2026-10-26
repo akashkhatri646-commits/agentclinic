@@ -1,14 +1,13 @@
 import type { Prisma, PrismaClient } from "@prisma/client"
 import { formatIdList, parseIdList } from "./id-list"
-import { getScenarios } from "./scenarios/intake-triage"
-import { getPreviousVersion, listVersions } from "./specialists"
-import { themeLabel } from "./themes"
+import { mergeLatestPerInstance } from "./merge"
+import { loadSpecialist } from "./specialist-store"
 import { isEmptyPlan, planSync, type FixState, type FixStatus, type ModeState } from "./triage"
 
 /** The slice of the database client the sync needs, so the seed and tests can supply their own. */
 export type TriageDb = Pick<
   PrismaClient,
-  "failureMode" | "fix" | "fixEvent" | "evalRun" | "notification" | "$transaction"
+  "failureMode" | "fix" | "fixEvent" | "evalRun" | "notification" | "specialist" | "$transaction"
 >
 
 /** The parts of a stored eval run the sync reads. A run loaded with its results satisfies this. */
@@ -18,6 +17,8 @@ export type SyncableRun = {
   version: string
   createdAt: Date
   finishedAt: Date | null
+  /** The instance the run was made against. Runs from before Phase 10 have none and read as the standard clinic. */
+  instanceSlug?: string
   results: { scenarioId: string; passed: boolean }[]
 }
 
@@ -35,25 +36,37 @@ const NOTHING: SyncSummary = { created: 0, updated: 0, verified: 0, reappeared: 
  * (the runner logs it and carries on). A failure to notify never throws.
  */
 export async function syncFailureModes(run: SyncableRun, db: TriageDb): Promise<SyncSummary> {
-  const versionOrder = listVersions(run.specialistId).map((v) => v.version)
-  const scenarios = getScenarios(run.specialistId)
+  const loaded = await loadSpecialist(db, run.specialistId)
+  if (!loaded) return NOTHING
+  const versionOrder = loaded.versions.map((v) => v.label)
+  const scenarios = loaded.spec.scenarios.map((s) => ({ id: s.id, theme: s.theme, weight: s.weight }))
+  const themeOrder = loaded.spec.themes.map((t) => t.id)
+  const labels: Record<string, string> = Object.fromEntries(loaded.spec.themes.map((t) => [t.id, t.label]))
   if (scenarios.length === 0 || !versionOrder.includes(run.version)) return NOTHING
 
-  const previous = getPreviousVersion(run.specialistId, run.version)
-  const [modeRows, fixRows, previousRun] = await Promise.all([
+  const previousVersion = versionOrder[versionOrder.indexOf(run.version) - 1] ?? null
+  // The state of a version is the worst case across instances: the latest run on each
+  // instance, as of the time of this run. Runs made after it are not part of its history.
+  const runsOf = (version: string) =>
+    db.evalRun.findMany({
+      where: { specialistId: run.specialistId, version, createdAt: { lte: run.createdAt } },
+      select: { instanceSlug: true, createdAt: true, results: { select: { scenarioId: true, passed: true } } },
+    })
+  const [modeRows, fixRows, versionRuns, previousRuns] = await Promise.all([
     db.failureMode.findMany({ where: { specialistId: run.specialistId } }),
     db.fix.findMany({
       where: { failureMode: { specialistId: run.specialistId }, status: { in: ["SHIPPED", "VERIFIED"] } },
       select: { id: true, failureModeId: true, title: true, status: true, shippedVersion: true, ownerId: true, isSample: true },
     }),
-    previous
-      ? db.evalRun.findFirst({
-          where: { specialistId: run.specialistId, version: previous.version, createdAt: { lte: run.createdAt } },
-          orderBy: { createdAt: "desc" },
-          include: { results: { select: { scenarioId: true, passed: true } } },
-        })
-      : Promise.resolve(null),
+    runsOf(run.version),
+    previousVersion ? runsOf(previousVersion) : Promise.resolve([]),
   ])
+  // The run being synced is always part of its own version's state, even if the database
+  // has not returned it yet (a caller may pass a run it has not stored in full).
+  const merged = mergeLatestPerInstance(
+    versionRuns.length > 0 ? versionRuns : [{ instanceSlug: run.instanceSlug ?? "standard-clinic", createdAt: run.createdAt, results: run.results }]
+  )
+  const previousRun = previousRuns.length > 0 ? { results: mergeLatestPerInstance(previousRuns).results } : null
 
   const modes: ModeState[] = modeRows.map((m) => ({
     id: m.id,
@@ -78,8 +91,9 @@ export async function syncFailureModes(run: SyncableRun, db: TriageDb): Promise<
 
   const finishedAt = run.finishedAt ?? run.createdAt
   const plan = planSync({
-    run: { id: run.id, version: run.version, finishedAt, results: run.results },
+    run: { id: run.id, version: run.version, finishedAt, results: merged.results },
     scenarios,
+    themeOrder,
     modes,
     fixes,
     versionOrder,
@@ -167,7 +181,7 @@ export async function syncFailureModes(run: SyncableRun, db: TriageDb): Promise<
     await notify(
       db,
       r.ownerIds.filter((id) => realOwners.has(id)),
-      `"${themeLabel(r.theme)}" has reappeared after it was fixed.`,
+      `"${labels[r.theme] ?? r.theme}" has reappeared after it was fixed.`,
       r.failureModeId
     )
   }

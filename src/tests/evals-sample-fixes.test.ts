@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest"
 import { SAMPLE_FIXES } from "../lib/evals/sample-fixes"
 import { SAMPLE_TIMING } from "../lib/evals/sample-data"
 import { getTheme } from "../lib/evals/themes"
-import { INTAKE_TRIAGE_SCENARIOS as scenarios } from "../lib/evals/scenarios/intake-triage"
+import { intakeTriageSpec } from "../lib/evals/builtin-spec"
+
+const scenarios = intakeTriageSpec.scenarios
 import { SPECIALIST_VERSIONS, getSpecialistVersion, INTAKE_TRIAGE_ID } from "../lib/evals/specialists"
 import { planSync, type FixState, type ModeState, type SyncRun } from "../lib/evals/triage"
 

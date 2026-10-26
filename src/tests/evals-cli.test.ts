@@ -3,7 +3,17 @@ import { describeJudge, formatRunReport, parseEvalArgs } from "../lib/evals/cli"
 
 describe("parseEvalArgs", () => {
   it("defaults to all versions with no judge", () => {
-    expect(parseEvalArgs([])).toEqual({ ok: true, versions: null, judge: false, help: false })
+    expect(parseEvalArgs([])).toEqual({ ok: true, specialist: null, instance: null, versions: null, judge: false, help: false })
+  })
+
+  it("accepts --specialist and --instance, with a separate value and with =", () => {
+    expect(parseEvalArgs(["--specialist", "ticket-router", "--instance=all"])).toMatchObject({ ok: true, specialist: "ticket-router", instance: "all" })
+    expect(parseEvalArgs(["--specialist=a", "--instance", "short-staffed-clinic"])).toMatchObject({ specialist: "a", instance: "short-staffed-clinic" })
+  })
+
+  it.each([[["--specialist"]], [["--specialist", "--judge"]], [["--instance"]], [["--instance", "--version"]]])("rejects %j: a value is needed", (argv) => {
+    const r = parseEvalArgs(argv)
+    expect(r.ok).toBe(false)
   })
 
   it("accepts --version with a separate value and with =", () => {

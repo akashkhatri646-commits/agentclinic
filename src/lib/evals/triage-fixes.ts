@@ -1,5 +1,4 @@
 import type { PrismaClient } from "@prisma/client"
-import { getSpecialistVersion } from "./specialists"
 import {
   MAX_DESCRIPTION_LENGTH,
   MAX_TITLE_LENGTH,
@@ -11,7 +10,7 @@ import { canTransition, isFixStatus, isLevel, type FixStatus } from "./triage"
 /** The slice of the database client these services use, so the seed and tests can supply their own. */
 export type FixDb = Pick<
   PrismaClient,
-  "failureMode" | "fix" | "fixEvent" | "user" | "notification" | "$transaction"
+  "failureMode" | "fix" | "fixEvent" | "user" | "notification" | "specialist" | "$transaction"
 >
 
 const fail = (code: TriageErrorCode): { ok: false; code: TriageErrorCode } => ({ ok: false, code })
@@ -149,7 +148,11 @@ export async function changeFixStatus(input: ChangeStatusInput, db?: FixDb): Pro
 
   if (to === "SHIPPED") {
     if (typeof input.shippedVersion !== "string" || input.shippedVersion === "") return fail("version-required")
-    if (!getSpecialistVersion(fix.failureMode.specialistId, input.shippedVersion)) return fail("invalid-version")
+    const known = await client.specialist.findFirst({
+      where: { slug: fix.failureMode.specialistId, versions: { some: { label: input.shippedVersion } } },
+      select: { id: true },
+    })
+    if (!known) return fail("invalid-version")
     data = { status: to, shippedVersion: input.shippedVersion, shippedAt: at }
     note = `Shipped in ${input.shippedVersion}.`
   } else if (fix.status === "SHIPPED") {

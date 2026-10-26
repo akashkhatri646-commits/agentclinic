@@ -4,13 +4,6 @@ export type Severity = "LOW" | "MEDIUM" | "HIGH"
 export type Split = "DEV" | "HOLDOUT"
 export type Verdict = "PASS" | "FAIL"
 
-export type FailureCategory =
-  | "SEVERITY"
-  | "THERAPY"
-  | "SEVERITY_AND_THERAPY"
-  | "THERAPY_NOT_IN_CATALOGUE"
-  | "RATIONALE"
-
 export type SpecialistInput = {
   description: string
   /** Names of the therapies currently in the clinic catalogue. */
@@ -48,6 +41,13 @@ export type SpecialistVersion = {
 /** `score` is null when the judge could not produce a usable score; `note` says why. */
 export type JudgeResult = { score: number | null; note: string }
 
+/** What is being judged: the output field's name and the description its owner gave it. */
+export type JudgeContext = { field: string; description: string }
+
 export type Judge = {
-  score(description: string, rationale: string): Promise<JudgeResult>
+  /**
+   * Scores one output of a specialist for one input. `context` names the field being judged and
+   * says what it is, because the judge serves any specialist, not only the clinic's.
+   */
+  score(input: string, output: string, context?: JudgeContext): Promise<JudgeResult>
 }

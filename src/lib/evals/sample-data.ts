@@ -25,3 +25,9 @@ export const SAMPLE_TIMING: Record<string, SampleTiming> = {
     finishedAt: new Date("2026-10-22T09:04:00Z"),
   },
 }
+
+/**
+ * When the built-in intake-triage specialist is shown as created: the day v1 shipped, on the same
+ * invented timeline, so its time to first verdict reads as the 21 days v1 waited. Illustrative.
+ */
+export const SAMPLE_INTAKE_CREATED_AT = new Date("2026-09-01T09:00:00Z")

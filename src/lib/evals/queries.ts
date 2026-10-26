@@ -1,6 +1,14 @@
 import type { EvalRun } from "@prisma/client"
 import { prisma } from "../prisma"
-import { getPreviousVersion } from "./specialists"
+
+/** A specialist's version labels in release order, or an empty list for an unknown specialist. */
+export async function getVersionLabels(specialistId: string): Promise<string[]> {
+  const row = await prisma.specialist.findUnique({
+    where: { slug: specialistId },
+    select: { versions: { orderBy: { releasedAt: "asc" }, select: { label: true } } },
+  })
+  return row ? row.versions.map((v) => v.label) : []
+}
 
 export async function getEvalRuns(specialistId?: string) {
   return prisma.evalRun.findMany({
@@ -22,7 +30,7 @@ export async function getRunsForMetrics(specialistId: string) {
   return prisma.evalRun.findMany({
     where: { specialistId },
     orderBy: { createdAt: "asc" },
-    include: { results: { select: { scenarioId: true, passed: true } } },
+    include: { results: { select: { scenarioId: true, passed: true, split: true } } },
   })
 }
 
@@ -35,17 +43,21 @@ export async function getLatestRunForVersion(specialistId: string, version: stri
 }
 
 /**
- * The most recent run of the version released before `run`'s version, taken at
- * or before `run` was created so old runs compare against what existed then.
- * Returns null for the first version, or when that version has never been run.
+ * The most recent run of the version released before `run`'s version, on the same instance,
+ * taken at or before `run` was created so old runs compare against what existed then.
+ * Returns null for the first version, or when that version has never been run there.
  */
-export async function getPreviousVersionRun(run: Pick<EvalRun, "specialistId" | "version" | "createdAt">) {
-  const previous = getPreviousVersion(run.specialistId, run.version)
-  if (!previous) return null
+export async function getPreviousVersionRun(
+  run: Pick<EvalRun, "specialistId" | "version" | "createdAt" | "instanceSlug">
+) {
+  const labels = await getVersionLabels(run.specialistId)
+  const index = labels.indexOf(run.version)
+  if (index <= 0) return null
   return prisma.evalRun.findFirst({
     where: {
       specialistId: run.specialistId,
-      version: previous.version,
+      version: labels[index - 1],
+      instanceSlug: run.instanceSlug,
       createdAt: { lte: run.createdAt },
     },
     orderBy: { createdAt: "desc" },

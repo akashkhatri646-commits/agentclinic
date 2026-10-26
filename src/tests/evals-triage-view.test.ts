@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest"
-import { INTAKE_TRIAGE_SCENARIOS as scenarios } from "../lib/evals/scenarios/intake-triage"
+import { intakeTriageSpec } from "../lib/evals/builtin-spec"
+
+const scenarios = intakeTriageSpec.scenarios
 import {
   buildBacklog,
   currentRun,

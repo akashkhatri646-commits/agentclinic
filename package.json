@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "db:upgrade": "ts-node --project scripts/tsconfig.json prisma/upgrade.ts",
     "eval": "ts-node --project scripts/tsconfig.json scripts/eval.ts",
     "audit": "node scripts/audit.js"
   },

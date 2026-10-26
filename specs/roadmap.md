@@ -126,7 +126,7 @@ Goal: turn eval failures into a ranked fix backlog and track each fix through to
 
 ---
 
-## Phase 10 — Self-Serve Onboarding & Customer Instances
+## Phase 10 — Self-Serve Onboarding & Customer Instances ✓ Complete
 
 Goal: a new team can bring its own specialist and run the loop without help from the core team.
 

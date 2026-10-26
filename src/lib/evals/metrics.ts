@@ -1,3 +1,4 @@
+import { latestPerInstance } from "./merge"
 import { compareRuns, rate } from "./verdict"
 
 const MINUTE_MS = 60 * 1000
@@ -23,11 +24,13 @@ export type MetricsRun = {
   startedAt: Date | null
   finishedAt: Date | null
   isSample: boolean
+  /** The customer instance the run was made against; runs from before Phase 10 have none. */
+  instanceSlug?: string
   devPassed: number
   devTotal: number
   holdoutPassed: number
   holdoutTotal: number
-  results: { scenarioId: string; passed: boolean }[]
+  results: { scenarioId: string; passed: boolean; split?: string }[]
 }
 
 /** Specialist versions in release order. */
@@ -71,6 +74,8 @@ export type MetricsSummary = {
   excludedRuns: number
   /** True when any run is illustrative sample data. */
   includesSample: boolean
+  /** The instances behind the latest version's pass rates: the worst case across them is shown. */
+  instancesConsidered: string[]
 }
 
 export function median(values: number[]): number | null {
@@ -121,6 +126,44 @@ export function loopTimes(run: MetricsRun): {
 
 const finishTime = (run: MetricsRun): number => time(run.finishedAt ?? run.createdAt)
 
+const instanceOf = (run: MetricsRun): string => run.instanceSlug ?? "standard-clinic"
+
+/**
+ * The state of a version across instances: the latest run on each, with a scenario counted
+ * as passing only if it passes on all of them. With one instance this is that run itself, so
+ * single-instance numbers are exactly what they always were.
+ */
+export function worstCase(runs: MetricsRun[]): MetricsRun {
+  const latest = latestPerInstance(runs.map((r) => ({ run: r, instanceSlug: instanceOf(r), createdAt: new Date(finishTime(r)) }))).map(
+    (x) => x.run
+  )
+  if (latest.length === 1) return latest[0]
+  const failing = new Set<string>()
+  const splitOf = new Map<string, string | undefined>()
+  const seen = new Set<string>()
+  for (const run of latest) {
+    for (const r of run.results) {
+      seen.add(r.scenarioId)
+      if (!splitOf.has(r.scenarioId)) splitOf.set(r.scenarioId, r.split)
+      if (!r.passed) failing.add(r.scenarioId)
+    }
+  }
+  const results = Array.from(seen)
+    .sort()
+    .map((scenarioId) => ({ scenarioId, passed: !failing.has(scenarioId), split: splitOf.get(scenarioId) }))
+  const count = (split: string, passedOnly: boolean) =>
+    results.filter((r) => r.split === split && (!passedOnly || r.passed)).length
+  const base = latest.reduce((a, b) => (finishTime(b) >= finishTime(a) ? b : a))
+  return {
+    ...base,
+    results,
+    devTotal: count("DEV", false),
+    devPassed: count("DEV", true),
+    holdoutTotal: count("HOLDOUT", false),
+    holdoutPassed: count("HOLDOUT", true),
+  }
+}
+
 /**
  * Computes every Phase 8 metric from a list of runs and the versions in release order.
  *
@@ -140,8 +183,15 @@ export function buildMetrics(runs: MetricsRun[], versions: VersionInfo[]): Metri
 
   const latestRun = (version: string): MetricsRun | null => {
     const list = byVersion.get(version) ?? []
-    return list.length === 0 ? null : list.reduce((a, b) => (finishTime(b) >= finishTime(a) ? b : a))
+    return list.length === 0 ? null : worstCase(list)
   }
+
+  const instancesOf = (version: string | null): string[] =>
+    version === null
+      ? []
+      : latestPerInstance((byVersion.get(version) ?? []).map((r) => ({ instanceSlug: instanceOf(r), createdAt: new Date(finishTime(r)) }))).map(
+          (x) => x.instanceSlug
+        )
 
   const rows: VersionMetrics[] = versions.map((info, index) => {
     const versionRuns = byVersion.get(info.version) ?? []
@@ -184,5 +234,6 @@ export function buildMetrics(runs: MetricsRun[], versions: VersionInfo[]): Metri
     regressedTotal: rows.reduce((sum, r) => sum + (r.regressed ?? 0), 0),
     excludedRuns: runs.filter((r) => !hasLoopTimestamps(r)).length,
     includesSample: runs.some((r) => r.isSample),
+    instancesConsidered: instancesOf(versions.length ? versions[versions.length - 1].version : null),
   }
 }

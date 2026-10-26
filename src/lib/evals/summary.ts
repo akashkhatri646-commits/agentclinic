@@ -1,6 +1,6 @@
 import { getRunsForMetrics } from "./queries"
 import { buildMetrics, type MetricsRun } from "./metrics"
-import { INTAKE_TRIAGE_ID, listVersions } from "./specialists"
+import { listSpecialists } from "./specialist-store"
 
 export type LoopTimeTile = {
   medianLoopMs: number
@@ -11,6 +11,14 @@ export type LoopTimeTile = {
   includesSample: boolean
 }
 
+async function defaultSpecialist(): Promise<{ slug: string; versions: string[] } | null> {
+  const { prisma } = await import("../prisma")
+  const [first] = await listSpecialists(prisma)
+  if (!first) return null
+  const labels = await (await import("./queries")).getVersionLabels(first.slug)
+  return { slug: first.slug, versions: labels }
+}
+
 /**
  * The numbers for the staff-dashboard tile. Fail-soft: this sits on a page that
  * has nothing to do with evals, so if the metrics cannot be loaded it logs and
@@ -18,14 +26,15 @@ export type LoopTimeTile = {
  * down. Also null when there is no loop time to show yet.
  */
 export async function getLoopTimeTile(
-  load: (specialistId: string) => Promise<MetricsRun[]> = getRunsForMetrics
+  load: (specialistId: string) => Promise<MetricsRun[]> = getRunsForMetrics,
+  /** The default specialist (the first created) and its versions in release order. */
+  loadDefault: () => Promise<{ slug: string; versions: string[] } | null> = defaultSpecialist
 ): Promise<LoopTimeTile | null> {
   try {
-    const runs = await load(INTAKE_TRIAGE_ID)
-    const metrics = buildMetrics(
-      runs,
-      listVersions(INTAKE_TRIAGE_ID).map((v) => ({ version: v.version }))
-    )
+    const specialist = await loadDefault()
+    if (!specialist) return null
+    const runs = await load(specialist.slug)
+    const metrics = buildMetrics(runs, specialist.versions.map((version) => ({ version })))
     if (metrics.medianLoopMs === null || metrics.withinTarget === null) return null
     return {
       medianLoopMs: metrics.medianLoopMs,

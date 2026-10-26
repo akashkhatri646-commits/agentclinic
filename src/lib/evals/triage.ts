@@ -1,36 +1,40 @@
-import { THEMES, themeLabel, type ThemeId } from "./themes"
-import type { Scenario, Severity } from "./types"
+import { themeLabel } from "./themes"
 
 /* ───────────────────────── grouping ───────────────────────── */
 
+/** What triage needs to know about a scenario: where it belongs and how much it matters. */
+export type TriageScenario = { id: string; theme: string; weight: Level }
+
 export type ThemeGroup = {
-  theme: ThemeId
+  theme: string
   /** Scenarios of this theme in the golden set. */
   total: number
   /** Scenarios of this theme that fail in the run, sorted. */
   failingIds: string[]
-  /** The expected severity of each failing scenario. */
-  failingSeverities: Severity[]
+  /** The weight (1 to 3) of each failing scenario. */
+  failingWeights: Level[]
 }
 
 /**
- * Groups a run's results by scenario theme, in theme order. A result for a scenario
+ * Groups a run's results by scenario theme, in the given theme order (default: the order
+ * themes first appear in the scenarios). A result for a scenario
  * that is not in the set is ignored, and a scenario with no result is not counted
  * as failing.
  */
 export function groupByTheme(
   results: { scenarioId: string; passed: boolean }[],
-  scenarios: Scenario[]
+  scenarios: TriageScenario[],
+  themeOrder: string[] = Array.from(new Set(scenarios.map((s) => s.theme)))
 ): ThemeGroup[] {
   const failed = new Set(results.filter((r) => !r.passed).map((r) => r.scenarioId))
-  return THEMES.map((theme) => {
-    const inTheme = scenarios.filter((s) => s.theme === theme.id)
+  return themeOrder.map((theme) => {
+    const inTheme = scenarios.filter((s) => s.theme === theme)
     const failing = inTheme.filter((s) => failed.has(s.id))
     return {
-      theme: theme.id,
+      theme,
       total: inTheme.length,
       failingIds: failing.map((s) => s.id).sort(),
-      failingSeverities: failing.map((s) => s.expectedSeverity),
+      failingWeights: failing.map((s) => s.weight),
     }
   }).filter((g) => g.total > 0)
 }
@@ -39,7 +43,6 @@ export function groupByTheme(
 
 export type Level = 1 | 2 | 3
 
-export const SEVERITY_WEIGHT: Record<Severity, Level> = { LOW: 1, MEDIUM: 2, HIGH: 3 }
 export const SEVERITY_LABEL: Record<Level, string> = { 1: "Low", 2: "Medium", 3: "High" }
 export const EFFORT_LABEL: Record<Level, string> = { 1: "S", 2: "M", 3: "L" }
 export const DEFAULT_EFFORT: Level = 2
@@ -48,9 +51,9 @@ export function isLevel(value: unknown): value is Level {
   return value === 1 || value === 2 || value === 3
 }
 
-/** The highest expected severity among the failing scenarios, or 1 when none fail. */
-export function suggestSeverity(severities: Severity[]): Level {
-  return severities.reduce<Level>((max, s) => (SEVERITY_WEIGHT[s] > max ? SEVERITY_WEIGHT[s] : max), 1)
+/** The highest weight among the failing scenarios, or 1 when none fail. */
+export function suggestSeverity(weights: Level[]): Level {
+  return weights.reduce<Level>((max, w) => (w > max ? w : max), 1)
 }
 
 /** Staff's override when set, otherwise the suggestion. */
@@ -87,7 +90,8 @@ export type RankableMode = {
  * then label, so the order is stable and explainable. Resolved modes are left out.
  */
 export function rankBacklog<T extends RankableMode>(
-  modes: T[]
+  modes: T[],
+  labels: Record<string, string> = {}
 ): (T & { score: number; severity: Level })[] {
   return modes
     .filter((m) => m.status === "OPEN")
@@ -100,7 +104,7 @@ export function rankBacklog<T extends RankableMode>(
         b.score - a.score ||
         b.severity - a.severity ||
         b.frequency - a.frequency ||
-        themeLabel(a.theme).localeCompare(themeLabel(b.theme))
+        (labels[a.theme] ?? themeLabel(a.theme)).localeCompare(labels[b.theme] ?? themeLabel(b.theme))
     )
 }
 
@@ -250,18 +254,20 @@ const sameList = (a: string[], b: string[]) =>
  */
 export function planSync(input: {
   run: SyncRun
-  scenarios: Scenario[]
+  scenarios: TriageScenario[]
+  /** Theme order for the plan; defaults to the order themes appear in the scenarios. */
+  themeOrder?: string[]
   modes: ModeState[]
   fixes: FixState[]
   /** Version names in release order. */
   versionOrder: string[]
   previousRun: { results: { scenarioId: string; passed: boolean }[] } | null
 }): SyncPlan {
-  const { run, scenarios, modes, fixes, versionOrder, previousRun } = input
+  const { run, scenarios, themeOrder, modes, fixes, versionOrder, previousRun } = input
   const runIndex = versionOrder.indexOf(run.version)
   if (runIndex < 0) return EMPTY_PLAN
 
-  const groups = groupByTheme(run.results, scenarios)
+  const groups = groupByTheme(run.results, scenarios, themeOrder)
   const previouslyPassing = new Set(
     (previousRun?.results ?? []).filter((r) => r.passed).map((r) => r.scenarioId)
   )
@@ -272,7 +278,7 @@ export function planSync(input: {
     const mode = modes.find((m) => m.theme === group.theme)
     const failing = group.failingIds.length > 0
     const regressed = group.failingIds.filter((id) => previouslyPassing.has(id))
-    const suggestedSeverity = suggestSeverity(group.failingSeverities)
+    const suggestedSeverity = suggestSeverity(group.failingWeights)
 
     if (!mode) {
       if (failing) {

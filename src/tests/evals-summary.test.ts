@@ -7,6 +7,10 @@ vi.mock("../lib/prisma", () => ({ prisma: {} }))
 
 const d = (iso: string) => new Date(iso)
 
+// The tile shows the default (first created) specialist; here that is intake-triage with v1 and v2.
+const defaultSpecialist = async () => ({ slug: "intake-triage", versions: ["v1", "v2"] })
+const tileOf = (load: Parameters<typeof getLoopTimeTile>[0]) => getLoopTimeTile(load, defaultSpecialist)
+
 function run(version: string, overrides: Partial<MetricsRun> = {}): MetricsRun {
   return {
     specialistId: "intake-triage",
@@ -27,7 +31,7 @@ function run(version: string, overrides: Partial<MetricsRun> = {}): MetricsRun {
 
 describe("getLoopTimeTile", () => {
   it("returns the headline numbers", async () => {
-    const tile = await getLoopTimeTile(async () => [
+    const tile = await tileOf(async () => [
       run("v1", { changeShippedAt: d("2026-09-01T09:00:00Z"), startedAt: d("2026-09-22T09:00:00Z"), finishedAt: d("2026-09-22T09:05:00Z") }),
       run("v2"),
     ])
@@ -40,16 +44,28 @@ describe("getLoopTimeTile", () => {
   })
 
   it("is within target when every loop is short", async () => {
-    const tile = await getLoopTimeTile(async () => [run("v2")])
+    const tile = await tileOf(async () => [run("v2")])
     expect(tile!.withinTarget).toBe(true)
   })
 
+  it("returns null, without loading runs, when there is no specialist yet", async () => {
+    const load = vi.fn(async () => [run("v1")])
+    expect(await getLoopTimeTile(load, async () => null)).toBeNull()
+    expect(load).not.toHaveBeenCalled()
+  })
+
+  it("loads the runs of the default specialist", async () => {
+    const load = vi.fn(async () => [run("v1")])
+    await getLoopTimeTile(load, async () => ({ slug: "ticket-router", versions: ["v1"] }))
+    expect(load).toHaveBeenCalledWith("ticket-router")
+  })
+
   it("returns null when there are no runs, so the tile is not shown", async () => {
-    expect(await getLoopTimeTile(async () => [])).toBeNull()
+    expect(await tileOf(async () => [])).toBeNull()
   })
 
   it("returns null when no run has a release time", async () => {
-    expect(await getLoopTimeTile(async () => [run("v1", { changeShippedAt: null })])).toBeNull()
+    expect(await tileOf(async () => [run("v1", { changeShippedAt: null })])).toBeNull()
   })
 
   it("does not throw when the metrics cannot be loaded: it logs and returns null", async () => {
@@ -57,7 +73,7 @@ describe("getLoopTimeTile", () => {
     const load = vi.fn(async () => {
       throw new Error("no such column: changeShippedAt")
     })
-    await expect(getLoopTimeTile(load)).resolves.toBeNull()
+    await expect(tileOf(load)).resolves.toBeNull()
     expect(spy).toHaveBeenCalledTimes(1)
     spy.mockRestore()
   })
