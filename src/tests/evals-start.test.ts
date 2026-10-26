@@ -18,6 +18,7 @@ function fakeDb() {
     { label: "v1", releasedAt: new Date("2026-10-01T00:00:00Z"), builtinKey: null },
   ])
   const db = {
+    specialistEvent: { create: vi.fn(async () => ({})) },
     specialist: {
       findUnique: vi.fn(async ({ where }: { where: { slug: string } }) =>
         where.slug === "intake-triage" ? intakeTriageRow() : where.slug === "ticket-router" ? imported : null
@@ -95,6 +96,21 @@ describe("startEvalRun validation", () => {
     const result = await start({ instance: ALL_INSTANCES })
     expect(result).toEqual({ ok: true, runId: "r3", runIds: ["r1", "r2", "r3"] })
     expect(vi.mocked(runEval).mock.calls.map((c) => c[0].instance)).toEqual(SEEDED_INSTANCES.map((i) => i.slug))
+  })
+
+  it("records who started the run on the specialist, after it succeeds", async () => {
+    const db = fakeDb()
+    await startEvalRun({ ...input, db })
+    const events = (db as unknown as { specialistEvent: { create: ReturnType<typeof vi.fn> } }).specialistEvent.create
+    expect(events).toHaveBeenCalledWith({ data: { specialistId: "sp-intake-triage", type: "RUN_STARTED", actorId: "user-1", actorRole: "STAFF" } })
+  })
+
+  it("does not fail the run when the event cannot be recorded", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {})
+    const db = fakeDb()
+    ;(db as unknown as { specialistEvent: { create: ReturnType<typeof vi.fn> } }).specialistEvent.create.mockRejectedValue(new Error("x"))
+    expect((await startEvalRun({ ...input, db })).ok).toBe(true)
+    spy.mockRestore()
   })
 
   it("reports run-failed, without throwing, when the runner fails", async () => {

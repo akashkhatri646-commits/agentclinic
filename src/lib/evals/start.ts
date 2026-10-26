@@ -2,6 +2,7 @@ import { canRunEvals } from "../guards"
 import { createAnthropicJudge, isJudgeConfigured } from "./judge"
 import { STANDARD_INSTANCE, listInstances } from "./instances"
 import { runEval, type EvalDb } from "./runner"
+import { recordEvent, type ServiceDb } from "./specialist-service"
 import { loadSpecialist } from "./specialist-store"
 
 export type EvalErrorCode =
@@ -79,6 +80,7 @@ export async function startEvalRun(input: {
       })
       runIds.push(run.id)
     }
+    await recordEvent(db as ServiceDb, specialist.id, "RUN_STARTED", { id: input.userId, role: input.role })
     return { ok: true, runId: runIds[runIds.length - 1], runIds }
   } catch (e) {
     console.error("Eval run failed", e)
