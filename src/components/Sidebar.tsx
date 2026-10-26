@@ -61,6 +61,12 @@ export default async function Sidebar() {
           {staff && (
             <>
               <li>
+                <Link href="/dashboard/specialists">Specialists</Link>
+              </li>
+              <li>
+                <Link href="/dashboard/onboarding">Onboarding</Link>
+              </li>
+              <li>
                 <Link href="/dashboard/evals">Evals</Link>
               </li>
               <li>

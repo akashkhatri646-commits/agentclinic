@@ -17,6 +17,8 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import EmptyState from "@/components/EmptyState"
 import PassRateChart from "@/components/PassRateChart"
+import { computeAdoption, summariseOnboarding } from "@/lib/evals/onboarding"
+import { loadOnboardingFacts } from "@/lib/evals/onboarding-queries"
 
 export const metadata = { title: "Metrics — AgentClinic" }
 
@@ -48,11 +50,13 @@ export default async function MetricsPage({ searchParams }: { searchParams: { sp
       </article>
     )
   }
-  const [runs, labels, instances] = await Promise.all([
+  const [runs, labels, instances, facts] = await Promise.all([
     getRunsForMetrics(selected.slug),
     getVersionLabels(selected.slug),
     listInstances(prisma),
+    loadOnboardingFacts(prisma),
   ])
+  const adoption = computeAdoption(facts.map(summariseOnboarding))
   const versions = labels.map((version) => ({ version }))
   const metrics = buildMetrics(runs, versions)
   const instanceName = new Map(instances.map((i) => [i.slug, i.name]))
@@ -213,6 +217,52 @@ export default async function MetricsPage({ searchParams }: { searchParams: { sp
           </section>
         </>
       )}
+
+      <section aria-labelledby="adoption-heading">
+        <h3 id="adoption-heading">Adoption across all specialists</h3>
+        {adoption.sampleSpecialists > 0 && (
+          <aside className="sample-notice" role="note" aria-label="Sample data notice">
+            <strong>Includes sample data.</strong> {adoption.sampleSpecialists} of {adoption.specialists} specialists are
+            illustrative: their dates and who helped them were made up. Specialists you create yourself are real.
+          </aside>
+        )}
+        <div className="metric-grid">
+          <div className="stat-tile">
+            <p className="stat-label">Specialists</p>
+            <p className="stat-value">{adoption.specialists}</p>
+            <p>
+              <small>{adoption.withVerdict} have reached a verdict</small>
+            </p>
+          </div>
+          <div className="stat-tile">
+            <p className="stat-label">Fully onboarded</p>
+            <p className="stat-value">{adoption.onboarded}</p>
+            <p>
+              <small>A verdict and a fix verified by a later run</small>
+            </p>
+          </div>
+          <div className="stat-tile">
+            <p className="stat-label">Unassisted</p>
+            <p className="stat-value">{adoption.unassistedShare === null ? na : formatPercent(adoption.unassistedShare)}</p>
+            <p>
+              <small>
+                {adoption.unassisted} of {adoption.onboarded} onboarded. Unassisted means no admin other than the owner acted
+                before the first verified fix.
+              </small>
+            </p>
+          </div>
+          <div className="stat-tile">
+            <p className="stat-label">Median time to first verdict</p>
+            <p className="stat-value">{duration(adoption.medianMsToFirstVerdict)}</p>
+            <p>
+              <small>From creating the specialist to its first verdict</small>
+            </p>
+          </div>
+        </div>
+        <small>
+          Unassisted is a proxy for teams running the loop on their own. <Link href="/dashboard/specialists">See the specialists</Link>.
+        </small>
+      </section>
     </article>
   )
 }

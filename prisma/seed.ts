@@ -2,7 +2,10 @@ import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 import { runEval } from "../src/lib/evals/runner"
 import { SAMPLE_FIXES } from "../src/lib/evals/sample-fixes"
-import { SAMPLE_TIMING } from "../src/lib/evals/sample-data"
+import { SAMPLE_INTAKE_CREATED_AT, SAMPLE_TIMING } from "../src/lib/evals/sample-data"
+import { SAMPLE_SPECIALISTS, sampleOutputs } from "../src/lib/evals/sample-specialists"
+import { getTemplate, templateText } from "../src/lib/evals/templates"
+import { validateSpecialistConfig } from "../src/lib/evals/spec"
 import { INTAKE_TRIAGE_ID } from "../src/lib/evals/specialists"
 import { BUILTIN_VERSIONS } from "../src/lib/evals/builtin"
 import { intakeTriageSpec } from "../src/lib/evals/builtin-spec"
@@ -11,6 +14,78 @@ import { createSpecialist } from "../src/lib/evals/specialist-store"
 import { changeFixStatus, createFix } from "../src/lib/evals/triage-fixes"
 
 const prisma = new PrismaClient()
+
+/**
+ * Creates the illustrative specialists (see src/lib/evals/sample-specialists.ts) through the
+ * same code a team uses: create from the classification template, register versions, grade
+ * imported outputs, triage, and move fixes, all backdated and flagged as sample data.
+ */
+async function seedSampleSpecialists() {
+  const admin = await prisma.user.findUniqueOrThrow({ where: { email: "admin@clinic.local" } })
+  for (const sample of SAMPLE_SPECIALISTS) {
+    const owner = await prisma.user.findUniqueOrThrow({ where: { email: sample.ownerEmail } })
+    const config = {
+      ...JSON.parse(templateText(getTemplate("classification")!)),
+      slug: sample.slug,
+      name: sample.name,
+      description: sample.description,
+    }
+    const validated = validateSpecialistConfig(JSON.stringify(config))
+    if (!validated.ok) throw new Error(`Sample specialist ${sample.slug} is invalid: ${validated.errors[0].message}`)
+    const created = await createSpecialist({
+      db: prisma,
+      spec: validated.spec,
+      ownerId: owner.id,
+      actorRole: owner.role,
+      isSample: true,
+      createdAt: sample.createdAt,
+    })
+    if (!created.ok) throw new Error(`Could not seed the sample specialist ${sample.slug}`)
+
+    // Every version is registered first, so a fix can name one that has not been run yet.
+    for (const v of sample.versions) {
+      await prisma.specialistVersionRow.create({
+        data: { specialistId: created.id, label: v.label, summary: v.summary, releasedAt: v.releasedAt },
+      })
+    }
+    for (const v of sample.versions) {
+      const actor = v.importedBy === "admin" ? admin : owner
+      await runEval({
+        specialistId: sample.slug,
+        version: v.label,
+        triggeredBy: actor.id,
+        outputs: sampleOutputs(validated.spec, v.wrong),
+        db: prisma,
+        timing: { changeShippedAt: v.releasedAt, startedAt: v.startedAt, finishedAt: v.finishedAt },
+        isSample: true,
+      })
+      await prisma.specialistEvent.create({
+        data: { specialistId: created.id, type: "OUTPUTS_IMPORTED", actorId: actor.id, actorRole: actor.role, isSample: true, createdAt: v.finishedAt },
+      })
+
+      for (const fix of sample.fixes.filter((f) => f.afterVersion === v.label)) {
+        const mode = await prisma.failureMode.findUnique({ where: { specialistId_theme: { specialistId: sample.slug, theme: fix.theme } } })
+        if (!mode) throw new Error(`No failure mode "${fix.theme}" to attach the sample fix "${fix.title}" to`)
+        const mover = fix.actor === "admin" ? admin : owner
+        const made = await createFix(
+          { failureModeId: mode.id, title: fix.title, description: fix.description, ownerId: owner.id, actorId: mover.id, at: fix.createdAt, isSample: true },
+          prisma
+        )
+        if (!made.ok) throw new Error(`Sample fix "${fix.title}" refused: ${made.code}`)
+        const started = await changeFixStatus({ fixId: made.value.id, to: "IN_PROGRESS", actorId: mover.id, at: fix.startedAt }, prisma)
+        if (!started.ok) throw new Error(`Sample fix "${fix.title}" could not start: ${started.code}`)
+        if (fix.shipped) {
+          const shipped = await changeFixStatus(
+            { fixId: made.value.id, to: "SHIPPED", shippedVersion: fix.shipped.version, actorId: mover.id, at: fix.shipped.at },
+            prisma
+          )
+          if (!shipped.ok) throw new Error(`Sample fix "${fix.title}" could not ship: ${shipped.code}`)
+        }
+      }
+    }
+    console.log(`  seeded sample specialist: ${sample.slug}`)
+  }
+}
 
 /**
  * Creates the illustrative fixes (see src/lib/evals/sample-fixes.ts) that come after a given run,
@@ -303,7 +378,7 @@ async function main() {
   console.log(`  seeded ${SEEDED_INSTANCES.length} customer instances`)
 
   // The built-in specialist, created through the same path a team uses, owned by the admin.
-  const created = await createSpecialist({ db: prisma, spec: intakeTriageSpec, ownerId: adminUser.id, actorRole: "ADMIN" })
+  const created = await createSpecialist({ db: prisma, spec: intakeTriageSpec, ownerId: adminUser.id, actorRole: "ADMIN", createdAt: SAMPLE_INTAKE_CREATED_AT })
   if (!created.ok) throw new Error("Could not seed the intake-triage specialist")
   for (const v of BUILTIN_VERSIONS.filter((b) => b.slug === INTAKE_TRIAGE_ID)) {
     await prisma.specialistVersionRow.create({
@@ -328,10 +403,12 @@ async function main() {
     await createSampleFixes(version)
   }
 
-  const modes = await prisma.failureMode.findMany({ include: { fixes: true } })
-  const open = modes.filter((m) => m.status === "OPEN").length
-  const verified = modes.flatMap((m) => m.fixes).filter((f) => f.status === "VERIFIED").length
-  console.log(`  seeded triage: ${modes.length} failure modes (${open} open), ${verified} fixes verified by the v2 run`)
+  const intakeModes = await prisma.failureMode.findMany({ where: { specialistId: INTAKE_TRIAGE_ID }, include: { fixes: true } })
+  const open = intakeModes.filter((m) => m.status === "OPEN").length
+  const verified = intakeModes.flatMap((m) => m.fixes).filter((f) => f.status === "VERIFIED").length
+  console.log(`  seeded triage: ${intakeModes.length} failure modes (${open} open), ${verified} fixes verified by the v2 run`)
+
+  await seedSampleSpecialists()
 
 }
 
