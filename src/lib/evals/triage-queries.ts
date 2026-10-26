@@ -2,7 +2,7 @@ import { prisma } from "../prisma"
 import { parseIdList } from "./id-list"
 import { latestPerInstance, mergeLatestPerInstance } from "./merge"
 import { loadSpecialist } from "./specialist-store"
-import { listInstances } from "./instances"
+import { instanceNames, listInstances } from "./instances"
 import { buildBacklog, currentRun, scenarioRows, toBacklogItem, toFixView, type FixView, type ModeRow } from "./triage-view"
 
 const modeInclude = {
@@ -23,10 +23,9 @@ export async function getBacklog(specialistId: string) {
   const labels = Object.fromEntries((loaded?.spec.themes ?? []).map((t) => [t.id, t.label]))
   const backlog = buildBacklog(rows as ModeRow[], runs, (loaded?.versions ?? []).map((v) => v.label), labels)
   // The state is the worst case across instances; say which instances stand behind it.
-  const instanceName = new Map(instances.map((i) => [i.slug, i.name]))
   const version = backlog.reflects?.version
   const instancesConsidered = version
-    ? latestPerInstance(runs.filter((r) => r.version === version)).map((r) => instanceName.get(r.instanceSlug) ?? r.instanceSlug)
+    ? instanceNames(latestPerInstance(runs.filter((r) => r.version === version)).map((r) => r.instanceSlug), instances)
     : []
   return { ...backlog, instancesConsidered }
 }
@@ -105,7 +104,7 @@ export async function getFailureModeDetail(id: string) {
     specialistId: row.specialistId,
     mode: item,
     label: item.label,
-    instancesConsidered: merged.instances.map((i) => instanceName.get(i) ?? i),
+    instancesConsidered: instanceNames(merged.instances, instances),
     lastRunInstance: lastRun ? instanceName.get(lastRun.instanceSlug) ?? lastRun.instanceSlug : null,
     reflects: reflected ? { version: reflected.version, at: reflected.finishedAt ?? reflected.createdAt } : null,
     scenarios: scenarioRows(

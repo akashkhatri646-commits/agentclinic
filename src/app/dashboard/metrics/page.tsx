@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth"
 import { canViewEvals } from "@/lib/guards"
 import { getRunsForMetrics, getVersionLabels } from "@/lib/evals/queries"
-import { listInstances } from "@/lib/evals/instances"
+import { instanceNames, listInstances } from "@/lib/evals/instances"
 import { pickSpecialist, withSpecialist } from "@/lib/evals/picker"
 import { listSpecialists } from "@/lib/evals/specialist-store"
 import { prisma } from "@/lib/prisma"
@@ -59,8 +59,7 @@ export default async function MetricsPage({ searchParams }: { searchParams: { sp
   const adoption = computeAdoption(facts.map(summariseOnboarding))
   const versions = labels.map((version) => ({ version }))
   const metrics = buildMetrics(runs, versions)
-  const instanceName = new Map(instances.map((i) => [i.slug, i.name]))
-  const considered = metrics.instancesConsidered.map((slug) => instanceName.get(slug) ?? slug)
+  const considered = instanceNames(metrics.instancesConsidered, instances)
   const comparisons = metrics.versions.filter((v) => v.fixed !== null).length
 
   return (

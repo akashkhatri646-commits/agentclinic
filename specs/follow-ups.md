@@ -29,7 +29,7 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 |---|---|---|---|
 | LLM judge | Never run against the real API; only tested with a fake client | Request shape, structured-output parsing and model behaviour are unverified end to end | Run `npm run eval -- --judge` once with an `ANTHROPIC_API_KEY` and record the result |
 | Hold-out set | The scenarios and the `v2` rules were written by the same author in one sitting | The hold-out is not statistically independent, so the `v2` PASS demonstrates the harness, not that `v2` generalises. Some `v2` vocabulary (for example "do not exist", "leak") overlaps hold-out wording | Have a second person write new hold-out scenarios; rotate real failures into the dev set (Phase 9) |
-| Scenarios and specialists | Defined in code, not data | Adding a scenario or specialist means a code change | Move to the database with an editor (Phase 10) |
+| Scenarios and specialists | Defined in code, not data | Adding a scenario or specialist means a code change | Resolved in Phase 10: specialists, scenarios and instances live in the database and are added by pasting a config. The built-in specialist's rules (`v1`, `v2`) are still code |
 | Concurrency and cost | Two runs can be started at once, there is no throttle, and runs cannot be deleted. With the judge on, each run makes one small Haiku call per passing scenario (about 30) | Extra rows, and API spend that is unbounded in principle (cents per run in practice); staff-only | Optional: disable the button while a run is in flight, rate-limit the action, add run deletion |
 | Unknown run id | Returns HTTP 200 with the not-found page | Same for every route with a loading skeleton; only matters to tools that read the status code | Accept, or drop the skeleton on that route |
 | Demo data | `prisma/seed.ts` names a demo agent's model `claude-3-haiku-20240307`, a retired model id | Cosmetic; no API call uses it | Rename to a current model string |
@@ -69,13 +69,38 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 | Score inputs | Changing severity or effort is not recorded in a history, only fix changes are | No audit trail for why a ranking changed | Add a small history for failure-mode input changes |
 | Fixes | A fix belongs to one failure mode and cannot be edited, deleted or moved | A typo in a title stays; a fix that covers two modes needs two records | Add edit and delete, and let a fix cover several modes |
 | Verification | A fix is verified only when every scenario of its failure mode passes, with no partial credit | A mode with one stubborn scenario holds back every fix to it | Show per-scenario progress, or allow splitting a mode |
-| Single specialist | Triage is built for the intake-triage specialist only | Not yet usable for another specialist | Generalise with bring-your-own specialists (Phase 10) |
+| Single specialist | Triage is built for the intake-triage specialist only | Not yet usable for another specialist | Resolved in Phase 10: triage works for any specialist |
 | Actions on the wrong page | Posting a triage action to a page that does not host it returns a 500 for any role | Harmless (nothing changes) and only reachable by hand-crafted requests | Accept, or handle the unknown-action case |
 
 ### Not verified in Phase 9
 
 - The manual flows in `specs/2026-10-26-phase-9-failure-triage/validation.md` were exercised over HTTP and in headless Chrome, not by hand in a browser, and the pages were not tested with a screen reader.
 - The reappearance flow was checked by deleting the therapy directly in the database, not through the Therapies page.
+
+## Phase 10 (self-serve onboarding and customer instances)
+
+| Area | Issue | Impact | Suggested fix |
+|---|---|---|---|
+| Instances | The three instances are seeded and fixed; there is no editor, and the standard clinic's reference list is the live therapy catalogue | A team cannot add an environment of its own, and a custom reference list name other than "therapies" has no instance that provides it, so an `inReference` check on it fails with a clear message | An instance editor, and reference lists per specialist |
+| Definition edits | Replacing the whole definition is the only edit; once there are runs, scenarios, fields, themes and checks can be added but not removed, renamed or moved | Fixing a mistaken scenario id means a new specialist | Edit scenarios one by one with a history, and a way to retire a scenario without losing its results |
+| No deletion | Specialists, versions, instances and runs cannot be deleted or renamed | A test specialist stays forever | Soft delete with an owner or admin confirmation |
+| Value matching | Values are compared as trimmed, case-sensitive text; numbers and booleans become text | "Billing" and "billing" differ; a number is not compared as a number | Optional case-insensitive and numeric checks |
+| "Unassisted" | A proxy: no admin other than the owner acted before the first verified fix. It cannot tell a team that read the playbook from one that was coached by a colleague with staff access | The adoption share overstates independence when help comes from non-admins | Record who a team asked for help, or survey teams |
+| Seeded adoption story | The three extra specialists, their dates and who helped whom are invented (flagged as sample); the built-in specialist's creation date is backdated to match the invented timeline | The adoption numbers on a fresh install are illustrative, and a specialist with sample runs counts as sample | Replace with real onboardings as they happen; keep the flag |
+| Worst case across instances | A scenario fails if it fails on any instance with a run of the current version, so adding a hard instance lowers the numbers | Intended, but it can look like a regression of the specialist when it is a new environment | The failure mode page names which instance's run changed it; a per-instance view is the next step |
+| Dashboard tile | The staff-dashboard loop-time tile shows the first specialist created, not all | With several specialists it is one specialist's number | Choose the specialist, or show a count across them |
+| Imported outputs | The harness trusts the outputs it is given: it cannot tell whether they came from the stated version | A team can import outputs that do not match a real release | Optional: a hash or a signed run record from the team's pipeline |
+| Judge on imported outputs | The judge runs on the configured field of an imported specialist, but is unverified against the real API (as in Phase 7) | Same as Phase 7 | Run it once with a key and record the result |
+| Form race | The paste boxes are uncontrolled text areas, so typing before the page finishes loading is kept; templates, files and a failed attempt replace the text through script | Nothing visible, but a browser with scripts disabled cannot load a template or file into the box | Accept; paste works without scripts |
+| Edit-time validation | The edit page validates only on submit, so a mistake shows after pressing Save | Slower feedback than inline validation | A "Check" button that validates without saving |
+
+### Not verified in Phase 10
+
+- The manual flows in `specs/2026-10-26-phase-10-self-serve-onboarding/validation.md` were exercised in headless Chrome (a scripted walk from template to verified fix, the instance spread and the permission checks), not by hand in a browser, and the new pages were not tested with a screen reader.
+- The LLM judge on an imported specialist has not run against the real API.
+- Uploading a file into the paste box was not exercised (the box was filled by script).
+- The migrations were applied to the development database that held Phase 7 to 9 data, with row counts compared; they were not tried on a copy of anyone else's data.
+- The playbook has not been followed cold by someone who did not build the app.
 
 ## Design notes
 

@@ -33,12 +33,38 @@ const ONLY = process.env.AUDIT_ONLY || ""
 const WIDTHS = [375, 768, 1280]
 const PASSWORD = "password123" // demo password set by prisma/seed.ts
 
+// Phase 10 pages. ticket-router is a seeded sample specialist owned by staff; a second specialist makes the
+// picker appear, and pages are also opened with a specialist chosen, as a link from the picker would.
+const SPECIALIST_PAGES = [
+  "/dashboard/specialists",
+  "/dashboard/specialists/new",
+  "/dashboard/specialists/ticket-router",
+  "/dashboard/specialists/ticket-router/edit",
+  "/dashboard/specialists/ticket-router/import",
+  "/dashboard/specialists/intake-triage",
+  "/dashboard/onboarding",
+  "/dashboard/onboarding?specialist=ticket-router",
+  "/dashboard/evals?specialist=ticket-router",
+  "/dashboard/metrics?specialist=ticket-router",
+  "/dashboard/triage?specialist=ticket-router",
+]
+
 const ROLES = {
   agent: {
     email: "agent@clinic.local",
     pages: ["/dashboard/ailments", "/dashboard/ailments/new", "/dashboard/notifications", "/dashboard/profile"],
     detailLists: ["/dashboard/ailments"],
-    forbidden: ["/dashboard/evals", "/dashboard/metrics", "/dashboard/triage"],
+    forbidden: [
+      "/dashboard/evals",
+      "/dashboard/metrics",
+      "/dashboard/triage",
+      "/dashboard/specialists",
+      "/dashboard/specialists/new",
+      "/dashboard/specialists/ticket-router",
+      "/dashboard/specialists/ticket-router/edit",
+      "/dashboard/specialists/ticket-router/import",
+      "/dashboard/onboarding",
+    ],
   },
   staff: {
     email: "staff@clinic.local",
@@ -51,13 +77,22 @@ const ROLES = {
       "/dashboard/evals",
       "/dashboard/metrics",
       "/dashboard/triage",
+      ...SPECIALIST_PAGES,
     ],
     detailLists: ["/dashboard/ailments", "/dashboard/evals", "/dashboard/triage"],
     forbidden: [],
   },
   admin: {
     email: "admin@clinic.local",
-    pages: ["/dashboard", "/dashboard/admin/users", "/dashboard/notifications", "/dashboard/evals", "/dashboard/metrics", "/dashboard/triage"],
+    pages: [
+      "/dashboard",
+      "/dashboard/admin/users",
+      "/dashboard/notifications",
+      "/dashboard/evals",
+      "/dashboard/metrics",
+      "/dashboard/triage",
+      ...SPECIALIST_PAGES,
+    ],
     detailLists: ["/dashboard/evals", "/dashboard/triage"],
     forbidden: [],
   },
@@ -65,7 +100,7 @@ const ROLES = {
 
 // Where a role that is turned away from a page should end up, and text that only eval pages contain.
 const ALLOWED_LANDING = ["/dashboard", "/dashboard/ailments"]
-const EVAL_CONTENT = ["Run an eval", "Eval Verdict", "golden scenarios", "Median loop time", "Quality across versions", "Regressions detected", "Fix backlog", "Open failure modes"]
+const EVAL_CONTENT = ["Import outputs", "Onboarding steps", "Adoption across all specialists", "Describe your specialist", "Run an eval", "Eval Verdict", "golden scenarios", "Median loop time", "Quality across versions", "Regressions detected", "Fix backlog", "Open failure modes"]
 
 // Links on a list page that point at a detail page: an id segment of 20+ lowercase letters and digits.
 const DETAIL_LINK = /\/dashboard\/(ailments|evals|triage)\/[a-z0-9]{20,}$/

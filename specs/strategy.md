@@ -1,6 +1,6 @@
 # Strategy: Self-Serve Hill Climbing for AI Specialists
 
-> Status: **proposal**. Phases 1–6 describe what is built (or in progress). Phases 7–10 are planned and not yet implemented. See `specs/roadmap.md` for delivery status.
+> Status: **built**. Phases 1–10 are implemented; the product is a worked example of self-serve hill climbing for AI specialists. This document keeps the reasoning behind each phase. See `specs/roadmap.md` for delivery status and `specs/follow-ups.md` for what is open.
 
 ## 1. Problem
 
@@ -70,7 +70,7 @@ Targets are placeholders to be calibrated against a measured baseline in the pil
 | 7 | **Eval harness**: golden scenarios, runner, deterministic + LLM-judge checks, quality verdict | Complete | Without a trustworthy verdict nothing else matters |
 | 8 | **Loop-time and quality metrics**: change→verdict timing, pass rate per version, regression flags | Complete | Makes the north star measurable early, so progress is provable |
 | 9 | **Failure triage**: cluster failures, score by frequency × severity ÷ effort, ranked fix backlog | Complete | Turns verdicts into action |
-| 10 | **Self-serve onboarding**: bring-your-own-specialist config, default eval templates, guided setup, playbook | Planned | Last, because defaults should come from patterns learned in 7–9 |
+| 10 | **Self-serve onboarding**: bring-your-own-specialist config, default eval templates, guided setup, playbook, customer instances, an adoption metric | Complete | Last, because defaults should come from patterns learned in 7–9 |
 
 Phase 8 (metrics) is sequenced before Phase 9 (triage) on purpose. A measured baseline is the cheapest high-signal evidence, and triage design benefits from real verdict data.
 

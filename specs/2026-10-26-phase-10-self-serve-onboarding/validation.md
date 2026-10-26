@@ -110,3 +110,57 @@
 - [ ] The onboarding flow, the assistance flow, the definition-change flow and the instance spread walked through by hand in a browser
 - [ ] Responsive and axe checks done with the audit script covering the new pages
 - [ ] `docs/playbook.md` reviewed; the README, strategy doc, follow-ups and changelog updated; Phase 10 marked `✓ Complete` in `specs/roadmap.md`
+
+---
+
+## Results (recorded at the end of implementation)
+
+Everything above was checked on branch `phase-10-self-serve-onboarding`. Items are ticked in the lists above only where the evidence below covers them; the deviations are listed so nothing reads as better than it is.
+
+### Commands
+
+| Check | Result |
+|---|---|
+| `npm test` | 35 files, 931 tests passing, none skipped. The earlier 569 became 569 minus the deleted `evals-checks` tests, with the rest rewritten or kept; every rewritten test is explained in the commit that rewrote it |
+| `npx tsc --noEmit` | clean |
+| `npm run lint` | no warnings or errors |
+| `npm run build` | succeeds; the new routes are 96.2 to 97.3 kB first-load JS (limit 250 kB) |
+| Migrations | applied to the development database that held Phase 7 to 9 data: 2 runs and 64 results before and after the first migration; values and categories backfilled and spot-checked (d05, d06, d23 on `v1`); the second migration drops the old result columns |
+| `npm run eval` (default instance) | `v1` FAIL 12/24 dev and 3/8 hold-out; `v2` PASS 22/24 and 7/8 failing exactly d23, d24 and h08 |
+| Seed on a fresh run | 3 instances; 8 failure modes with 2 open and 4 fixes verified by the `v2` run (all unchanged from Phase 9); 3 sample specialists created through the real code |
+| Mutation checks | Deliberately breaking rules made the suite fail each time: format (reserved names, the DEV rule, unknown properties, missing expected values), grading (reference check, equals, all-checks rule), store (the has-runs rule, slug change, unchanged short-circuit, scenario order), outputs (ordering, future release time, missing scenarios), service (ownership on import, undoing a registered version), onboarding (owner counted as assistance, the cutoff, staff counted as admin, onboarded without a verified fix) |
+
+### Seeded numbers
+
+- Adoption section: **4 specialists, 4 with a verdict, 3 fully onboarded, 2 of those unassisted (66.7%), median time to first verdict 5.5 days** (21.0, 2.0, 2.0 and 9.0 days). Matches what was predicted.
+- **Deviation:** the spec predicted "3 sample specialists, all flagged except intake-triage". As built, a specialist with sample runs counts as sample, and the intake-triage specialist's seeded runs are sample, so **all 4 are shown as including sample data**. Its definition is real; its dates are the illustrative ones.
+- **Deviation:** the intake-triage specialist's creation date is backdated to the day `v1` shipped on the invented timeline, so its time to first verdict reads 21 days. That is illustrative, like the run timings.
+
+### Manual flows
+
+Walked in headless Chrome by a script, not by hand in a browser:
+
+- Template to verified fix as staff: a deliberately bad theme is refused with `scenarios[0].theme` and the real themes, nothing saved and no error text in the URL, the typed text kept; the valid config creates a specialist owned by the creator; the checklist reads 2 of 6; a new version without a release time is refused; `v1` imports to a FAIL verdict naming the instance; the Edge cases failure mode shows 3 of 5 failing; a proposed fix is in progress; a second `v2` import ships it; the corrected `v2` run passes, resolves the mode, verifies the fix and the checklist reads "Onboarded"; the Metrics page shows the Adoption section.
+- Permissions: a staff member who is not the owner sees no edit or import buttons, and opening edit or import directly sends them back; the owner sees both; an unknown specialist is a 404; an agent opening any new page lands on a normal page with no content and sees no specialist or onboarding links.
+- Instances: `v2` on the short-staffed clinic fails with the missing-therapy reason; Triage and Metrics say "worst case across Standard clinic, Short-staffed clinic"; the expectation-gap failure mode reappears; "All instances" makes one run on each instance.
+- The fix steps in the template walk used the fix service rather than the triage forms (typing into the triage form from the script was unreliable; those forms were walked in Phase 9). The triage forms themselves were not re-walked here.
+
+### Not covered by the walks above
+
+- Assisted versus unassisted was checked by unit tests and the seeded story (a seeded admin import), not by an admin acting on a staff-owned specialist in the browser.
+- Direct calls to the server actions from another staff member are covered by service tests (role and ownership re-checked), not by crafted HTTP requests.
+- Definition changes after runs (adding allowed, removing refused) are covered by unit tests of the store and the service, not by the edit page.
+- File upload into the paste box.
+- Nothing was run against the real LLM API.
+- A screen reader.
+
+### Audit
+
+`npm run audit`, run in parts to keep memory low, then in full: **0 failing everywhere**: specialists 36 checks, onboarding 12, evals 24, metrics 12, triage 60, ailments 30, therapies 3, notifications 9, and the full run 201 checks. axe reported no WCAG 2.1 A or AA violations at 1280 px, there is no horizontal overflow or clipped Sign out button at 375, 768 or 1280 px, and agents are kept out of the new pages.
+
+### Where the plan changed
+
+- The old `EvalResult` columns were kept for one group and dropped by a second migration, so the app worked after every group.
+- The old checks were removed once the generic engine had been proved against them, so the old-versus-new comparison no longer exists; the pinned results are the guard.
+- Failure categories are now `TYPE:field` (for example `MISMATCH:severity`), as the requirements said; the old names are mapped by the migration.
+- The paste box is an uncontrolled text area so typing before the page finishes loading is not lost.

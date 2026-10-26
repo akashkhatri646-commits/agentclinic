@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { latestPerInstance, mergeLatestPerInstance, type InstanceRunInput } from "../lib/evals/merge"
+import { instanceNames } from "../lib/evals/instances"
 import { worstCase, buildMetrics, type MetricsRun } from "../lib/evals/metrics"
 import { pickSpecialist, withSpecialist } from "../lib/evals/picker"
 import { describeCategory } from "../lib/evals/format"
@@ -176,4 +177,22 @@ describe("rankBacklog labels", () => {
     expect(ranked.map((m) => m.theme)).toEqual(["zz", "aa"])
     expect(rankBacklog([mode("zz"), mode("aa")]).map((m) => m.theme)).toEqual(["aa", "zz"])
   })
+})
+
+describe("instanceNames", () => {
+  const instances = [
+    { slug: "standard-clinic", name: "Standard clinic" },
+    { slug: "short-staffed-clinic", name: "Short-staffed clinic" },
+    { slug: "regional-catalogue", name: "Regional catalogue" },
+  ]
+  it("lists names in the instances' own order, standard first, whatever order the slugs come in", () => {
+    expect(instanceNames(["short-staffed-clinic", "standard-clinic"], instances)).toEqual(["Standard clinic", "Short-staffed clinic"])
+    expect(instanceNames(["regional-catalogue", "short-staffed-clinic", "standard-clinic"], instances)).toEqual([
+      "Standard clinic", "Short-staffed clinic", "Regional catalogue",
+    ])
+  })
+  it("keeps the slug text for an unknown instance and puts it last, without repeating", () => {
+    expect(instanceNames(["zeta", "alpha", "standard-clinic", "alpha"], instances)).toEqual(["Standard clinic", "alpha", "zeta"])
+  })
+  it("returns nothing for no slugs", () => expect(instanceNames([], instances)).toEqual([]))
 })

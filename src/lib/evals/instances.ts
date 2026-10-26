@@ -86,3 +86,15 @@ export async function resolveInstance(db: InstanceDb, slug: string): Promise<Res
   const therapies = (await db.therapy.findMany({ select: { name: true } })).map((t) => t.name)
   return { slug: row.slug, name: row.name, lists: { therapies } }
 }
+
+/**
+ * Instance names in the order the instances are listed (standard clinic first), for the notes that
+ * say which instances stand behind a number. Unknown slugs keep their own text and go last.
+ */
+export function instanceNames(slugs: string[], instances: { slug: string; name: string }[]): string[] {
+  const order = new Map(instances.map((i, index) => [i.slug, index]))
+  const name = new Map(instances.map((i) => [i.slug, i.name]))
+  return Array.from(new Set(slugs))
+    .sort((a, b) => (order.get(a) ?? Infinity) - (order.get(b) ?? Infinity) || a.localeCompare(b))
+    .map((s) => name.get(s) ?? s)
+}

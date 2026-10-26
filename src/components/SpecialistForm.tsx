@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormState } from "react-dom"
-import { useId, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import Link from "next/link"
 import type { SpecialistFormState } from "@/app/dashboard/specialists/actions"
 
@@ -40,18 +40,17 @@ export default function SpecialistForm({
   offerJudge,
 }: Props) {
   const [state, formAction] = useFormState<SpecialistFormState, FormData>(action, {})
-  const [text, setText] = useState(initialText)
-  const [lastState, setLastState] = useState(state)
+  // The text box is uncontrolled: anything typed before the page finishes loading is kept, and
+  // templates, files and a failed attempt replace it through the ref.
+  const box = useRef<HTMLTextAreaElement>(null)
+  const setText = (value: string) => {
+    if (box.current) box.current.value = value
+  }
   const errorId = useId()
   const helpId = useId()
   const fileError = useRef<string | null>(null)
   const [, force] = useState(0)
 
-  // After a failed submit the server returns what was typed; show it rather than the starting text.
-  if (state !== lastState) {
-    setLastState(state)
-    if (state.text !== undefined) setText(state.text)
-  }
 
   async function onFile(file: File | undefined) {
     fileError.current = null
@@ -63,6 +62,12 @@ export default function SpecialistForm({
     }
     force((n) => n + 1)
   }
+
+  // After a failed submit the server returns what was typed; show it rather than the starting text.
+  useEffect(() => {
+    if (state.text !== undefined) setText(state.text)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state])
 
   const hasProblems = Boolean(state.message || (state.errors && state.errors.length > 0))
 
@@ -134,8 +139,8 @@ export default function SpecialistForm({
           className="json-box"
           required
           spellCheck={false}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+          ref={box}
+          defaultValue={initialText}
           aria-invalid={hasProblems ? true : undefined}
           aria-describedby={`${helpId}${hasProblems ? ` ${errorId}` : ""}`}
         />
