@@ -1,21 +1,30 @@
 import type { PrismaClient } from "@prisma/client"
-import { runChecks } from "./checks"
-import { getScenarios } from "./scenarios/intake-triage"
-import { getSpecialistVersion } from "./specialists"
-import type { FailureCategory, Judge, Scenario } from "./types"
+import { getBuiltinRunner } from "./builtin"
+import { gradeOutputs, type OutputValues } from "./grade"
+import { STANDARD_INSTANCE, resolveInstance } from "./instances"
+import { loadSpecialist } from "./specialist-store"
 import { syncFailureModes, type TriageDb } from "./triage-sync"
-import { JUDGE_PASS_SCORE, computeVerdict, judgeCoverage } from "./verdict"
+import type { Judge } from "./types"
+import { computeVerdict, judgeCoverage } from "./verdict"
 
 /** The slice of the database client the runner needs, so a seed script or test can supply its own. */
-export type EvalDb = Pick<PrismaClient, "therapy" | "evalRun"> & TriageDb
+export type EvalDb = Pick<PrismaClient, "therapy" | "evalRun" | "instance"> & TriageDb
 
 export type RunEvalOptions = {
+  /** The specialist's slug. */
   specialistId: string
   version: string
+  /** The customer instance to run against. Default: the standard clinic. */
+  instance?: string
   /** A user id, or "cli". */
   triggeredBy?: string | null
-  /** Optional rationale judge. Omit to run deterministic checks only. */
+  /** Optional judge. Omit to run deterministic checks only. */
   judge?: Judge | null
+  /**
+   * What the specialist returned, by scenario id. Required for versions that do not generate
+   * their outputs from code; ignored for built-in versions.
+   */
+  outputs?: Record<string, OutputValues>
   db?: EvalDb
   /**
    * Overrides the recorded timestamps. Only the seed uses this, to record an
@@ -26,31 +35,34 @@ export type RunEvalOptions = {
   isSample?: boolean
 }
 
-type ResultRow = {
-  scenarioId: string
-  split: Scenario["split"]
-  passed: boolean
-  category: FailureCategory | null
-  reason: string | null
-  expectedSeverity: string
-  expectedTherapy: string
-  actualSeverity: string
-  actualTherapy: string
-  rationale: string
-  judgeScore: number | null
-  judgeNote: string | null
-}
-
 /**
- * Runs every scenario for one specialist version against the live clinic
- * environment (the current therapy catalogue), computes the verdict, and
- * stores the run with all its results in a single nested write.
+ * Runs every scenario of one specialist version against one customer instance, grades the
+ * outputs, computes the verdict, and stores the run with all its results in a single nested
+ * write. Built-in versions generate their outputs here; every other version must be given
+ * its outputs. Either way the grading is the same.
  */
 export async function runEval(options: RunEvalOptions) {
-  const { specialistId, version, triggeredBy = null, judge = null, timing, isSample = false } = options
+  const {
+    specialistId,
+    version,
+    instance: instanceSlug = STANDARD_INSTANCE,
+    triggeredBy = null,
+    judge = null,
+    timing,
+    isSample = false,
+  } = options
 
-  const specialist = getSpecialistVersion(specialistId, version)
-  if (!specialist) throw new Error(`Unknown specialist version: ${specialistId} ${version}.`)
+  // The shared client is loaded only when the caller did not supply one, so a
+  // seed script or test that passes its own never constructs a second client.
+  const db = options.db ?? ((await import("../prisma")).prisma as unknown as EvalDb)
+
+  const specialist = await loadSpecialist(db, specialistId)
+  if (!specialist) throw new Error(`Unknown specialist: ${specialistId}.`)
+  const versionRow = specialist.versions.find((v) => v.label === version)
+  if (!versionRow) throw new Error(`Unknown specialist version: ${specialistId} ${version}.`)
+
+  const instance = await resolveInstance(db, instanceSlug)
+  if (!instance) throw new Error(`Unknown instance: ${instanceSlug}.`)
 
   if (timing) {
     if (timing.startedAt < timing.changeShippedAt) {
@@ -64,75 +76,39 @@ export async function runEval(options: RunEvalOptions) {
   // "Run started": taken before any scenario runs.
   const startedAt = timing?.startedAt ?? new Date()
 
-  // The shared client is loaded only when the caller did not supply one, so a
-  // seed script or test that passes its own never constructs a second client.
-  const db = options.db ?? (await import("../prisma")).prisma
-
-  const scenarios = getScenarios(specialistId)
-  const catalogue = (await db.therapy.findMany({ select: { name: true } })).map((t) => t.name)
-
-  const rows: ResultRow[] = []
-  for (const scenario of scenarios) {
-    const output = specialist.run({ description: scenario.description, therapies: catalogue })
-    const check = runChecks(scenario, output, catalogue)
-
-    let { passed, category, reason } = check
-    let judgeScore: number | null = null
-    let judgeNote: string | null = null
-
-    // The judge only looks at answers that already passed the deterministic
-    // checks: a failed scenario already has a reason. A judge problem is never
-    // allowed to fail a scenario; only a returned low score does.
-    if (judge && check.passed) {
-      try {
-        const result = await judge.score(scenario.description, output.rationale)
-        judgeScore = result.score
-        judgeNote = result.note
-        if (result.score !== null && result.score < JUDGE_PASS_SCORE) {
-          passed = false
-          category = "RATIONALE"
-          reason = `Rationale scored ${result.score}/5 (pass is ${JUDGE_PASS_SCORE}): ${result.note}`
-        }
-      } catch (e) {
-        judgeNote = `Judge unavailable: ${e instanceof Error ? e.message : "unknown error"}`
-      }
-    }
-
-    rows.push({
-      scenarioId: scenario.id,
-      split: scenario.split,
-      passed,
-      category,
-      reason,
-      expectedSeverity: scenario.expectedSeverity,
-      expectedTherapy: scenario.expectedTherapy,
-      actualSeverity: output.severity,
-      actualTherapy: output.therapy,
-      rationale: output.rationale,
-      judgeScore,
-      judgeNote,
-    })
+  const spec = specialist.spec
+  const generate = getBuiltinRunner(versionRow.builtinKey)
+  let outputs: Record<string, OutputValues>
+  if (generate) {
+    outputs = Object.fromEntries(spec.scenarios.map((s) => [s.id, generate(s.input, instance.lists)]))
+  } else if (options.outputs) {
+    outputs = options.outputs
+  } else {
+    throw new Error(`Version ${version} does not generate its own outputs, so its outputs must be imported.`)
   }
 
-  const dev = rows.filter((r) => r.split === "DEV")
-  const holdout = rows.filter((r) => r.split === "HOLDOUT")
+  const graded = await gradeOutputs({ spec, outputs, lists: instance.lists, judge })
   const counts = {
-    devTotal: dev.length,
-    devPassed: dev.filter((r) => r.passed).length,
-    holdoutTotal: holdout.length,
-    holdoutPassed: holdout.filter((r) => r.passed).length,
+    devTotal: graded.devTotal,
+    devPassed: graded.devPassed,
+    holdoutTotal: graded.holdoutTotal,
+    holdoutPassed: graded.holdoutPassed,
   }
   const { verdict, reason } = computeVerdict(counts)
+
+  // An empty reference list makes every value that must be in it invalid; say so.
+  const usedLists = Array.from(new Set(spec.checks.flatMap((c) => (c.type === "inReference" ? [c.list] : []))))
+  const emptyLists = usedLists.filter((name) => (instance.lists[name] ?? []).length === 0)
   let verdictReason =
-    catalogue.length === 0
-      ? `The therapy catalogue is empty, so no recommendation can be valid. ${reason}`
+    emptyLists.length > 0
+      ? `The ${emptyLists.map((n) => `"${n}"`).join(" and ")} list${emptyLists.length > 1 ? "s are" : " is"} empty for ${instance.name}, so no value can be valid. ${reason}`
       : reason
 
   // A judge that was switched on but could not score must not look like a graded run.
   if (judge) {
-    const { attempted, scored } = judgeCoverage(rows)
+    const { attempted, scored } = judgeCoverage(graded.rows)
     if (attempted > 0 && scored < attempted) {
-      verdictReason += ` The LLM judge was enabled but scored only ${scored} of ${attempted} rationales, so the rest were not graded.`
+      verdictReason += ` The LLM judge was enabled but scored only ${scored} of ${attempted} answers, so the rest were not graded.`
     }
   }
 
@@ -149,15 +125,29 @@ export async function runEval(options: RunEvalOptions) {
       verdictReason,
       judgeEnabled: judge !== null,
       triggeredBy,
+      instanceSlug: instance.slug,
+      outputsSource: generate ? "BUILTIN" : "IMPORTED",
       // "Change shipped" comes from the version's release date, copied onto the run.
-      changeShippedAt: timing?.changeShippedAt ?? specialist.releasedAt,
+      changeShippedAt: timing?.changeShippedAt ?? versionRow.releasedAt,
       startedAt,
       finishedAt,
       isSample,
       // With explicit timing, createdAt follows finishedAt so list order and the
       // previous-version lookup (which use createdAt) agree with the recorded history.
       ...(timing ? { createdAt: finishedAt } : {}),
-      results: { create: rows },
+      results: {
+        create: graded.rows.map((r) => ({
+          scenarioId: r.scenarioId,
+          split: r.split,
+          passed: r.passed,
+          category: r.category,
+          reason: r.reason,
+          expected: JSON.stringify(r.expected),
+          actual: JSON.stringify(r.actual),
+          judgeScore: r.judgeScore,
+          judgeNote: r.judgeNote,
+        })),
+      },
     },
     include: { results: true },
   })

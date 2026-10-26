@@ -1,12 +1,14 @@
 import { formatPercent, judgeCoverage, rate } from "./verdict"
 
 export type EvalArgs =
-  | { ok: true; versions: string[] | null; judge: boolean; help: boolean }
+  | { ok: true; specialist: string | null; instance: string | null; versions: string[] | null; judge: boolean; help: boolean }
   | { ok: false; error: string }
 
-export const USAGE = `Usage: npm run eval -- [--version v1|v2] [--judge]
+export const USAGE = `Usage: npm run eval -- [--specialist <slug>] [--instance <slug>|all] [--version v1|v2] [--judge]
 
-  --version <v>   Run only this specialist version (repeatable). Default: every version, in release order.
+  --specialist <s>  Which specialist to run. Default: the first one created (intake-triage in the seeded database).
+  --instance <i>    Which customer instance to run against, or "all" for one run on each. Default: standard-clinic.
+  --version <v>   Run only this specialist version (repeatable). Default: every version that runs from code, in release order.
   --judge         Also score rationales with the LLM judge. Needs ANTHROPIC_API_KEY; ignored with a notice if it is not set.
   --help          Show this message.
 
@@ -17,6 +19,8 @@ export function parseEvalArgs(argv: string[]): EvalArgs {
   const versions: string[] = []
   let judge = false
   let help = false
+  let specialist: string | null = null
+  let instance: string | null = null
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
@@ -24,6 +28,14 @@ export function parseEvalArgs(argv: string[]): EvalArgs {
       judge = true
     } else if (arg === "--help" || arg === "-h") {
       help = true
+    } else if (arg === "--specialist" || arg.startsWith("--specialist=")) {
+      const value = arg === "--specialist" ? argv[++i] : arg.slice("--specialist=".length)
+      if (!value || value.startsWith("--")) return { ok: false, error: "--specialist needs a value, e.g. --specialist intake-triage." }
+      specialist = value
+    } else if (arg === "--instance" || arg.startsWith("--instance=")) {
+      const value = arg === "--instance" ? argv[++i] : arg.slice("--instance=".length)
+      if (!value || value.startsWith("--")) return { ok: false, error: "--instance needs a value, e.g. --instance short-staffed-clinic or --instance all." }
+      instance = value
     } else if (arg === "--version" || arg.startsWith("--version=")) {
       const value = arg === "--version" ? argv[++i] : arg.slice("--version=".length)
       if (!value || value.startsWith("--")) return { ok: false, error: "--version needs a value, e.g. --version v2." }
@@ -33,12 +45,13 @@ export function parseEvalArgs(argv: string[]): EvalArgs {
     }
   }
 
-  return { ok: true, versions: versions.length ? Array.from(new Set(versions)) : null, judge, help }
+  return { ok: true, specialist, instance, versions: versions.length ? Array.from(new Set(versions)) : null, judge, help }
 }
 
 type ReportRun = {
   specialistId: string
   version: string
+  instanceSlug?: string
   verdict: string
   verdictReason: string
   devPassed: number
@@ -71,7 +84,7 @@ export function describeJudge(run: Pick<ReportRun, "judgeEnabled" | "results">):
 /** Plain-text summary of one run for the terminal. */
 export function formatRunReport(run: ReportRun): string {
   const lines = [
-    `${run.specialistId} ${run.version}  ${run.verdict}`,
+    `${run.specialistId} ${run.version}${run.instanceSlug ? ` on ${run.instanceSlug}` : ""}  ${run.verdict}`,
     `  dev ${run.devPassed}/${run.devTotal} (${formatPercent(rate(run.devPassed, run.devTotal))})` +
       `   hold-out ${run.holdoutPassed}/${run.holdoutTotal} (${formatPercent(rate(run.holdoutPassed, run.holdoutTotal))})`,
     `  ${run.verdictReason}`,

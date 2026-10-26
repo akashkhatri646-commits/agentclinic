@@ -1,9 +1,11 @@
 import { auth } from "@/lib/auth"
 import { canViewEvals } from "@/lib/guards"
 import { describeJudge } from "@/lib/evals/cli"
-import { getEvalRunById, getPreviousVersionRun } from "@/lib/evals/queries"
-import { INTAKE_TRIAGE_SCENARIOS } from "@/lib/evals/scenarios/intake-triage"
-import { getSpecialistVersion } from "@/lib/evals/specialists"
+import { describeCategory } from "@/lib/evals/format"
+import { listInstances } from "@/lib/evals/instances"
+import { getEvalRunById, getPreviousVersionRun, getVersionLabels } from "@/lib/evals/queries"
+import { loadSpecialist } from "@/lib/evals/specialist-store"
+import { prisma } from "@/lib/prisma"
 import {
   DEV_PASS_THRESHOLD,
   MAX_HOLDOUT_GAP,
@@ -17,8 +19,6 @@ import Link from "next/link"
 
 export const metadata = { title: "Eval Verdict — AgentClinic" }
 
-const descriptions = new Map(INTAKE_TRIAGE_SCENARIOS.map((s) => [s.id, s.description]))
-
 function fmtDate(d: Date) {
   return d.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })
 }
@@ -30,7 +30,7 @@ function points(delta: number | null): string {
   return `${delta > 0 ? "+" : ""}${value} pts`
 }
 
-function ScenarioList({ ids }: { ids: string[] }) {
+function ScenarioList({ ids, descriptions }: { ids: string[]; descriptions: Map<string, string> }) {
   if (ids.length === 0) return <em>None</em>
   return (
     <ul>
@@ -43,6 +43,32 @@ function ScenarioList({ ids }: { ids: string[] }) {
   )
 }
 
+/** Expected and actual values are stored as JSON text; anything unreadable shows as no values. */
+function parseValues(text: string): Record<string, string> {
+  try {
+    const value: unknown = JSON.parse(text)
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return {}
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, String(v)]))
+  } catch {
+    return {}
+  }
+}
+
+/** One line per output field, as plain text. */
+function FieldValues({ values, fields }: { values: Record<string, string>; fields: string[] }) {
+  const names = fields.length > 0 ? fields.filter((f) => f in values) : Object.keys(values)
+  if (names.length === 0) return <em>None</em>
+  return (
+    <>
+      {names.map((name) => (
+        <div key={name}>
+          <small>{name}:</small> {values[name]}
+        </div>
+      ))}
+    </>
+  )
+}
+
 export default async function EvalRunPage({ params }: { params: { runId: string } }) {
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
@@ -51,7 +77,15 @@ export default async function EvalRunPage({ params }: { params: { runId: string 
   const run = await getEvalRunById(params.runId)
   if (!run) notFound()
 
-  const previousRun = await getPreviousVersionRun(run)
+  const [previousRun, loaded, labels, instances] = await Promise.all([
+    getPreviousVersionRun(run),
+    loadSpecialist(prisma, run.specialistId),
+    getVersionLabels(run.specialistId),
+    listInstances(prisma),
+  ])
+  const descriptions = new Map((loaded?.spec.scenarios ?? []).map((s) => [s.id, s.input]))
+  const instanceName = instances.find((i) => i.slug === run.instanceSlug)?.name ?? run.instanceSlug
+  const isFirstVersion = labels.indexOf(run.version) <= 0
   const comparison = previousRun
     ? compareRuns(
         { ...run, results: run.results },
@@ -64,7 +98,8 @@ export default async function EvalRunPage({ params }: { params: { runId: string 
   const gap = devRate !== null && holdoutRate !== null ? devRate - holdoutRate : null
   const failures = run.results.filter((r) => !r.passed)
   const byCategory = summariseFailures(run.results)
-  const specialist = getSpecialistVersion(run.specialistId, run.version)
+  const versionSummary = loaded?.versions.find((v) => v.label === run.version)?.summary
+  const fields = loaded?.spec.outputFields.map((f) => f.name) ?? []
 
   return (
     <article>
@@ -72,7 +107,7 @@ export default async function EvalRunPage({ params }: { params: { runId: string 
         <div>
           <h2>Eval Verdict</h2>
           <p>
-            {run.specialistId} {run.version} · {fmtDate(run.createdAt)}
+            {loaded?.spec.name ?? run.specialistId} {run.version} on {instanceName} · {fmtDate(run.createdAt)}
           </p>
         </div>
         <Link href="/dashboard/evals" role="button" className="outline">
@@ -134,7 +169,7 @@ export default async function EvalRunPage({ params }: { params: { runId: string 
         </figure>
         <small>
           LLM judge: {describeJudge(run)}.
-          {specialist && <> Version summary: {specialist.summary}</>}
+          {versionSummary && <> Version summary: {versionSummary}</>}
         </small>
       </section>
 
@@ -143,21 +178,21 @@ export default async function EvalRunPage({ params }: { params: { runId: string 
         {comparison && previousRun ? (
           <>
             <p>
-              Against {previousRun.version} ({fmtDate(previousRun.createdAt)}): dev{" "}
+              Against {previousRun.version} on {instanceName} ({fmtDate(previousRun.createdAt)}): dev{" "}
               <strong>{points(comparison.devDelta)}</strong>, hold-out{" "}
               <strong>{points(comparison.holdoutDelta)}</strong>.
             </p>
             <h4>Fixed ({comparison.fixed.length})</h4>
-            <ScenarioList ids={comparison.fixed} />
+            <ScenarioList ids={comparison.fixed} descriptions={descriptions} />
             <h4>Regressed ({comparison.regressed.length})</h4>
-            <ScenarioList ids={comparison.regressed} />
+            <ScenarioList ids={comparison.regressed} descriptions={descriptions} />
           </>
         ) : (
           <p>
             <em>
-              {run.version === "v1"
+              {isFirstVersion
                 ? "This is the first version, so there is nothing to compare with."
-                : "The previous version has not been run yet, so there is nothing to compare with."}
+                : `The previous version has not been run on ${instanceName} yet, so there is nothing to compare with.`}
             </em>
           </p>
         )}
@@ -181,7 +216,7 @@ export default async function EvalRunPage({ params }: { params: { runId: string 
               <tbody>
                 {byCategory.map((c) => (
                   <tr key={c.category}>
-                    <td>{c.category.replace(/_/g, " ").toLowerCase()}</td>
+                    <td>{describeCategory(c.category)}</td>
                     <td>{c.count}</td>
                   </tr>
                 ))}
@@ -213,14 +248,10 @@ export default async function EvalRunPage({ params }: { params: { runId: string 
                       <small>{descriptions.get(r.scenarioId)}</small>
                     </td>
                     <td>
-                      {r.expectedSeverity}
-                      <br />
-                      <small>{r.expectedTherapy}</small>
+                      <FieldValues values={parseValues(r.expected)} fields={fields} />
                     </td>
                     <td>
-                      {r.actualSeverity}
-                      <br />
-                      <small>{r.actualTherapy}</small>
+                      <FieldValues values={parseValues(r.actual)} fields={fields} />
                     </td>
                     <td>
                       {r.reason}
@@ -248,8 +279,7 @@ export default async function EvalRunPage({ params }: { params: { runId: string 
                 <th>Scenario</th>
                 <th>Set</th>
                 <th>Result</th>
-                <th>Severity</th>
-                <th>Therapy</th>
+                <th>Why</th>
                 <th>Judge</th>
               </tr>
             </thead>
@@ -259,8 +289,7 @@ export default async function EvalRunPage({ params }: { params: { runId: string 
                   <td>{r.scenarioId}</td>
                   <td>{r.split.toLowerCase()}</td>
                   <td>{r.passed ? "PASS" : "FAIL"}</td>
-                  <td>{r.actualSeverity}</td>
-                  <td>{r.actualTherapy}</td>
+                  <td>{r.passed ? "" : describeCategory(r.category)}</td>
                   <td>{r.judgeScore === null ? "n/a" : `${r.judgeScore}/5`}</td>
                 </tr>
               ))}

@@ -4,13 +4,6 @@ export type Severity = "LOW" | "MEDIUM" | "HIGH"
 export type Split = "DEV" | "HOLDOUT"
 export type Verdict = "PASS" | "FAIL"
 
-export type FailureCategory =
-  | "SEVERITY"
-  | "THERAPY"
-  | "SEVERITY_AND_THERAPY"
-  | "THERAPY_NOT_IN_CATALOGUE"
-  | "RATIONALE"
-
 export type SpecialistInput = {
   description: string
   /** Names of the therapies currently in the clinic catalogue. */

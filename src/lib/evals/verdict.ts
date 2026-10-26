@@ -1,4 +1,4 @@
-import type { FailureCategory, Verdict } from "./types"
+import type { Verdict } from "./types"
 
 /** A run passes only if the dev pass rate is at least this. */
 export const DEV_PASS_THRESHOLD = 0.85
@@ -63,15 +63,15 @@ export function computeVerdict(counts: Counts): { verdict: Verdict; reason: stri
 /** Counts of failed results per category, most common first. Passed results are ignored. */
 export function summariseFailures(
   results: { passed: boolean; category: string | null }[]
-): { category: FailureCategory; count: number }[] {
+): { category: string; count: number }[] {
   const counts = new Map<string, number>()
   for (const r of results) {
     if (r.passed) continue
-    const category = r.category ?? "SEVERITY_AND_THERAPY"
+    const category = r.category ?? "UNKNOWN"
     counts.set(category, (counts.get(category) ?? 0) + 1)
   }
   return Array.from(counts.entries())
-    .map(([category, count]) => ({ category: category as FailureCategory, count }))
+    .map(([category, count]) => ({ category, count }))
     .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category))
 }
 

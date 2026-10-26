@@ -3,7 +3,11 @@ import bcrypt from "bcryptjs"
 import { runEval } from "../src/lib/evals/runner"
 import { SAMPLE_FIXES } from "../src/lib/evals/sample-fixes"
 import { SAMPLE_TIMING } from "../src/lib/evals/sample-data"
-import { INTAKE_TRIAGE_ID, listVersions } from "../src/lib/evals/specialists"
+import { INTAKE_TRIAGE_ID } from "../src/lib/evals/specialists"
+import { BUILTIN_VERSIONS } from "../src/lib/evals/builtin"
+import { intakeTriageSpec } from "../src/lib/evals/builtin-spec"
+import { SEEDED_INSTANCES } from "../src/lib/evals/instances"
+import { createSpecialist } from "../src/lib/evals/specialist-store"
 import { changeFixStatus, createFix } from "../src/lib/evals/triage-fixes"
 
 const prisma = new PrismaClient()
@@ -281,7 +285,33 @@ async function main() {
   // deletes its fixes and their history with it.
   await prisma.failureMode.deleteMany({})
   await prisma.evalRun.deleteMany({})
-  for (const { version } of listVersions(INTAKE_TRIAGE_ID)) {
+  await prisma.specialist.deleteMany({}) // scenarios, versions and events go with it
+  await prisma.instance.deleteMany({})
+
+  // Customer instances: the environments a run can be made against.
+  for (const i of SEEDED_INSTANCES) {
+    await prisma.instance.create({
+      data: {
+        slug: i.slug,
+        name: i.name,
+        description: i.description,
+        shape: i.shape,
+        referenceLists: i.referenceLists ? JSON.stringify(i.referenceLists) : null,
+      },
+    })
+  }
+  console.log(`  seeded ${SEEDED_INSTANCES.length} customer instances`)
+
+  // The built-in specialist, created through the same path a team uses, owned by the admin.
+  const created = await createSpecialist({ db: prisma, spec: intakeTriageSpec, ownerId: adminUser.id, actorRole: "ADMIN" })
+  if (!created.ok) throw new Error("Could not seed the intake-triage specialist")
+  for (const v of BUILTIN_VERSIONS.filter((b) => b.slug === INTAKE_TRIAGE_ID)) {
+    await prisma.specialistVersionRow.create({
+      data: { specialistId: created.id, label: v.label, summary: v.summary, releasedAt: v.releasedAt, builtinKey: v.key },
+    })
+  }
+
+  for (const { label: version } of BUILTIN_VERSIONS.filter((b) => b.slug === INTAKE_TRIAGE_ID)) {
     const timing = SAMPLE_TIMING[version]
     const run = await runEval({
       specialistId: INTAKE_TRIAGE_ID,

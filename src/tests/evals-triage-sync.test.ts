@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from "vitest"
 import { syncFailureModes, type SyncableRun, type TriageDb } from "../lib/evals/triage-sync"
-import { INTAKE_TRIAGE_SCENARIOS as scenarios } from "../lib/evals/scenarios/intake-triage"
+import { intakeTriageSpec } from "../lib/evals/builtin-spec"
+import { intakeTriageRow } from "./support/specialist-rows"
+
+const scenarios = intakeTriageSpec.scenarios
 
 const at = (iso: string) => new Date(iso)
 const V1_FAIL = ["d05", "d06", "d07", "d11", "d12", "d13", "d16", "d17", "d19", "d21", "d22", "d23", "h01", "h02", "h04", "h05", "h08"]
@@ -43,7 +46,13 @@ const fixRow = (over: ModeRow = {}): ModeRow => ({
   ...over,
 })
 
-function mockDb(opts: { modes?: ModeRow[]; fixes?: ModeRow[]; previousRun?: unknown } = {}) {
+type RunRow = { instanceSlug: string; createdAt: Date; results: { scenarioId: string; passed: boolean }[] }
+
+/**
+ * `previousRun` is the stored run of v1 (the version before v2). `runs` gives stored runs by version,
+ * for tests of several instances; a version with none falls back to the run being synced.
+ */
+function mockDb(opts: { modes?: ModeRow[]; fixes?: ModeRow[]; previousRun?: { results: RunRow["results"] }; runs?: Record<string, RunRow[]> } = {}) {
   const failureMode = {
     findMany: vi.fn(async () => opts.modes ?? []),
     create: vi.fn((args: unknown) => ({ op: "mode.create", args })),
@@ -54,11 +63,17 @@ function mockDb(opts: { modes?: ModeRow[]; fixes?: ModeRow[]; previousRun?: unkn
     update: vi.fn((args: unknown) => ({ op: "fix.update", args })),
   }
   const fixEvent = { create: vi.fn((args: unknown) => ({ op: "event.create", args })) }
-  const evalRun = { findFirst: vi.fn(async () => opts.previousRun ?? null) }
+  const stored = (version: string): RunRow[] => {
+    if (opts.runs?.[version]) return opts.runs[version]
+    if (version === "v1" && opts.previousRun) return [{ instanceSlug: "standard-clinic", createdAt: at("2026-09-22T09:05:00Z"), results: opts.previousRun.results }]
+    return []
+  }
+  const evalRun = { findMany: vi.fn(async (args: { where: { version: string } }) => stored(args.where.version)) }
+  const specialist = { findUnique: vi.fn(async ({ where }: { where: { slug: string } }) => (where.slug === "intake-triage" ? intakeTriageRow() : null)) }
   const notification = { create: vi.fn(async () => ({})) }
   const $transaction = vi.fn(async (ops: unknown[]) => ops)
-  const db = { failureMode, fix, fixEvent, evalRun, notification, $transaction } as unknown as TriageDb
-  return { db, failureMode, fix, fixEvent, evalRun, notification, $transaction }
+  const db = { failureMode, fix, fixEvent, evalRun, notification, specialist, $transaction } as unknown as TriageDb
+  return { db, failureMode, fix, fixEvent, evalRun, notification, specialist, $transaction }
 }
 
 describe("syncFailureModes: nothing to do", () => {
@@ -116,12 +131,12 @@ describe("syncFailureModes: creating modes", () => {
   it("looks for the previous version's run to find regressed scenarios, and not for the first version", async () => {
     const first = mockDb()
     await syncFailureModes(makeRun("v1", V1_FAIL), first.db)
-    expect(first.evalRun.findFirst).not.toHaveBeenCalled()
+    expect(first.evalRun.findMany).toHaveBeenCalledTimes(1) // only its own version
 
     const second = mockDb({ previousRun: { results: results(V1_FAIL) } })
     await syncFailureModes(makeRun("v2", V2_FAIL), second.db)
-    expect(second.evalRun.findFirst).toHaveBeenCalledTimes(1)
-    const where = (second.evalRun.findFirst.mock.calls[0] as unknown as [{ where: Record<string, unknown> }])[0].where
+    expect(second.evalRun.findMany).toHaveBeenCalledTimes(2)
+    const where = (second.evalRun.findMany.mock.calls[1] as unknown as [{ where: Record<string, unknown> }])[0].where
     expect(where).toMatchObject({ specialistId: "intake-triage", version: "v1" })
   })
 
@@ -291,5 +306,91 @@ describe("syncFailureModes: failures are reported to the caller", () => {
     const m = mockDb()
     m.failureMode.findMany.mockRejectedValue(new Error("no such table: FailureMode"))
     await expect(syncFailureModes(makeRun("v1", V1_FAIL), m.db)).rejects.toThrow("no such table")
+  })
+})
+
+describe("syncFailureModes: worst case across instances (Phase 10)", () => {
+  const stored = (instanceSlug: string, iso: string, fail: string[]): RunRow => ({ instanceSlug, createdAt: at(iso), results: results(fail) })
+  const V2_AT = "2026-10-22T09:04:00Z"
+
+  it("reopens a resolved mode when the run on another instance fails it, and flags it reappeared", async () => {
+    const m = mockDb({
+      modes: [modeRow({ status: "RESOLVED", frequency: 0, failingScenarioIds: "[]", lastRunVersion: "v2" })],
+      runs: {
+        v2: [stored("standard-clinic", V2_AT, V2_FAIL), stored("short-staffed-clinic", "2026-10-23T10:00:00Z", ["d11", "d12"])],
+      },
+    })
+    const run = makeRun("v2", ["d11", "d12"], { id: "run-v2-short", createdAt: at("2026-10-23T10:00:00Z"), finishedAt: at("2026-10-23T10:00:00Z") })
+    const summary = await syncFailureModes(run, m.db)
+    expect(summary.reappeared).toBe(1)
+    const data = (m.failureMode.update.mock.calls[0][0] as { data: Record<string, unknown> }).data
+    expect(data).toMatchObject({ status: "OPEN", frequency: 2, reappeared: true, lastRunId: "run-v2-short" })
+  })
+
+  it("keeps a mode open when only the other instance still fails it, even if the standard clinic now passes", async () => {
+    const m = mockDb({
+      modes: [modeRow({ frequency: 2, failingScenarioIds: JSON.stringify(["d11", "d12"]), lastRunVersion: "v2" })],
+      runs: {
+        v2: [stored("short-staffed-clinic", "2026-10-23T10:00:00Z", ["d11", "d12"]), stored("standard-clinic", "2026-10-24T10:00:00Z", V2_FAIL)],
+      },
+    })
+    const run = makeRun("v2", V2_FAIL, { createdAt: at("2026-10-24T10:00:00Z"), finishedAt: at("2026-10-24T10:00:00Z") })
+    await syncFailureModes(run, m.db)
+    // Not resolved: the standard clinic passes, but the short-staffed clinic still fails the same two.
+    const data = (m.failureMode.update.mock.calls[0][0] as { data: Record<string, unknown> }).data
+    expect(data).toMatchObject({ status: "OPEN", frequency: 2, failingScenarioIds: '["d11","d12"]' })
+    expect(data).not.toHaveProperty("resolvedAt")
+  })
+
+  it("verifies a shipped fix only when its scenarios pass on every instance", async () => {
+    const failingElsewhere = mockDb({
+      modes: [modeRow()],
+      fixes: [fixRow()],
+      runs: { v2: [stored("standard-clinic", V2_AT, V2_FAIL), stored("short-staffed-clinic", V2_AT, ["d11"])] },
+    })
+    const summary = await syncFailureModes(makeRun("v2", V2_FAIL), failingElsewhere.db)
+    expect(summary.verified).toBe(0)
+    expect(failingElsewhere.fix.update).not.toHaveBeenCalled()
+
+    const passingEverywhere = mockDb({
+      modes: [modeRow()],
+      fixes: [fixRow()],
+      runs: { v2: [stored("standard-clinic", V2_AT, V2_FAIL), stored("short-staffed-clinic", V2_AT, V2_FAIL)] },
+    })
+    expect((await syncFailureModes(makeRun("v2", V2_FAIL), passingEverywhere.db)).verified).toBe(1)
+  })
+
+  it("only counts the latest run on each instance, so a fixed instance stops failing", async () => {
+    const m = mockDb({
+      modes: [modeRow()],
+      fixes: [fixRow()],
+      runs: {
+        v2: [
+          stored("short-staffed-clinic", "2026-10-21T09:00:00Z", ["d11"]), // an earlier failing run, since replaced
+          stored("short-staffed-clinic", "2026-10-22T09:00:00Z", V2_FAIL),
+          stored("standard-clinic", V2_AT, V2_FAIL),
+        ],
+      },
+    })
+    expect((await syncFailureModes(makeRun("v2", V2_FAIL), m.db)).verified).toBe(1)
+  })
+
+  it("ignores runs made after the one being synced, so replaying history is deterministic", async () => {
+    const m = mockDb({ modes: [modeRow()], fixes: [fixRow()] })
+    await syncFailureModes(makeRun("v2", V2_FAIL), m.db)
+    const where = (m.evalRun.findMany.mock.calls[0] as unknown as [{ where: Record<string, unknown> }])[0].where
+    expect(where).toMatchObject({ createdAt: { lte: at("2026-10-22T09:04:00Z") } })
+  })
+
+  it("compares with the previous version's merged state when finding regressions", async () => {
+    const m = mockDb({
+      runs: {
+        v1: [stored("standard-clinic", "2026-09-22T09:05:00Z", V1_FAIL), stored("short-staffed-clinic", "2026-09-22T09:05:00Z", [...V1_FAIL, "d24"])],
+      },
+    })
+    await syncFailureModes(makeRun("v2", V2_FAIL), m.db)
+    const sarcasm = m.failureMode.create.mock.calls.map((c) => (c[0] as { data: Record<string, unknown> }).data).find((d) => d.theme === "sarcasm-and-idiom")!
+    // d24 failed on one instance of v1 already, so in the merged view it is not a new regression.
+    expect(sarcasm.regressedScenarioIds).toBe("[]")
   })
 })

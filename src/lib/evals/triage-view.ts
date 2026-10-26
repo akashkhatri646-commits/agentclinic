@@ -9,7 +9,7 @@ import {
   type FixStatus,
   type Level,
 } from "./triage"
-import type { Scenario } from "./types"
+import type { ScenarioSpec } from "./spec"
 
 /** The shapes the pages read, built from database rows by pure functions so they can be tested. */
 
@@ -157,7 +157,7 @@ export function currentRun(runs: RunRef[], versionOrder: string[]): RunRef | nul
   return ofNewest.reduce((a, b) => (when(b) >= when(a) ? b : a))
 }
 
-export function toBacklogItem(row: ModeRow): BacklogItem {
+export function toBacklogItem(row: ModeRow, labels: Record<string, string> = {}): BacklogItem {
   const severity = effectiveSeverity(row)
   const fixes = row.fixes
     .map((f) => toFixView(f, row))
@@ -165,7 +165,7 @@ export function toBacklogItem(row: ModeRow): BacklogItem {
   return {
     id: row.id,
     theme: row.theme,
-    label: themeLabel(row.theme),
+    label: labels[row.theme] ?? themeLabel(row.theme),
     status: row.status === "RESOLVED" ? "RESOLVED" : "OPEN",
     frequency: row.frequency,
     totalScenarios: row.totalScenarios,
@@ -185,9 +185,14 @@ export function toBacklogItem(row: ModeRow): BacklogItem {
   }
 }
 
-export function buildBacklog(rows: ModeRow[], runs: RunRef[], versionOrder: string[]): Backlog {
-  const items = rows.map(toBacklogItem)
-  const open = rankBacklog(items)
+export function buildBacklog(
+  rows: ModeRow[],
+  runs: RunRef[],
+  versionOrder: string[],
+  labels: Record<string, string> = {}
+): Backlog {
+  const items = rows.map((r) => toBacklogItem(r, labels))
+  const open = rankBacklog(items, labels)
   const ranked = new Set(open.map((o) => o.id))
   const resolved = items
     .filter((i) => !ranked.has(i.id))
@@ -214,8 +219,12 @@ export type ScenarioRow = {
   id: string
   split: string
   description: string
-  expectedSeverity: string
-  expectedTherapy: string
+  /** How much a failure matters, 1 to 3. */
+  weight: number
+  /** The expected values, for example "severity HIGH, therapy Prompt Detox". */
+  expectedText: string
+  /** The instances whose latest run fails this scenario. */
+  failingInstances: string[]
   /** Null when the mode has never been evaluated against a run. */
   passing: boolean | null
   regressed: boolean
@@ -224,19 +233,21 @@ export type ScenarioRow = {
 /** The scenarios of a theme with their result in the state the mode reflects. */
 export function scenarioRows(
   theme: string,
-  scenarios: Scenario[],
+  scenarios: ScenarioSpec[],
   failingIds: string[],
   regressedIds: string[],
-  evaluated: boolean
+  evaluated: boolean,
+  failingInstances: Record<string, string[]> = {}
 ): ScenarioRow[] {
   return scenarios
     .filter((s) => s.theme === theme)
     .map((s) => ({
       id: s.id,
       split: s.split,
-      description: s.description,
-      expectedSeverity: s.expectedSeverity,
-      expectedTherapy: s.expectedTherapy,
+      description: s.input,
+      weight: s.weight,
+      expectedText: Object.entries(s.expected).map(([k, v]) => `${k} ${v}`).join(", "),
+      failingInstances: failingInstances[s.id] ?? [],
       passing: evaluated ? !failingIds.includes(s.id) : null,
       regressed: regressedIds.includes(s.id),
     }))

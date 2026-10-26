@@ -455,3 +455,52 @@ figure {
   width: auto;
   margin-bottom: 0;
 }
+
+/* Specialist picker and the other small inline forms of Phase 10. */
+.picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.picker label,
+.picker button {
+  margin-bottom: 0;
+}
+
+.picker button {
+  width: auto;
+}
+
+.json-box {
+  font-family: var(--pico-font-family-monospace);
+  font-size: 0.8125rem;
+  min-height: 18rem;
+}
+
+.error-list {
+  padding-left: 1.25rem;
+  color: var(--pico-del-color);
+}
+
+.error-list code {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.step-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.step-list li {
+  margin-bottom: 1rem;
+}
+
+.step-status {
+  display: inline-block;
+  min-width: 6rem;
+  font-weight: 600;
+}

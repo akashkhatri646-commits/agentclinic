@@ -1,7 +1,9 @@
 import { INTAKE_TRIAGE_SCENARIOS } from "./scenarios/intake-triage"
 import type { SpecialistSpec } from "./spec"
 import { THEMES } from "./themes"
-import { SEVERITY_WEIGHT } from "./triage"
+
+/** The weight a scenario gets from its expected severity, so triage scores are unchanged. */
+const SEVERITY_WEIGHT = { LOW: 1, MEDIUM: 2, HIGH: 3 } as const
 
 /**
  * The built-in intake-triage specialist expressed in the generic format, derived from the

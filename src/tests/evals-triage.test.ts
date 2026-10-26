@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest"
-import { INTAKE_TRIAGE_SCENARIOS as scenarios } from "../lib/evals/scenarios/intake-triage"
+import { intakeTriageSpec } from "../lib/evals/builtin-spec"
+
+const scenarios = intakeTriageSpec.scenarios
 import {
   DEFAULT_EFFORT,
   EMPTY_PLAN,
@@ -133,9 +135,9 @@ describe("groupByTheme", () => {
     expect(by("negation").failingIds).toEqual([])
   })
 
-  it("carries the expected severity of each failing scenario", () => {
+  it("carries the weight of each failing scenario (expected severity maps to 1, 2 or 3)", () => {
     const g = groupByTheme(results(["d23", "d24"]), scenarios).find((x) => x.theme === "sarcasm-and-idiom")!
-    expect(g.failingSeverities.sort()).toEqual(["LOW", "MEDIUM"])
+    expect([...g.failingWeights].sort()).toEqual([1, 2])
   })
 
   it("matches the shipped results: v1 fails 17 scenarios across 8 themes, v2 fails 3 across 2", () => {
@@ -152,17 +154,19 @@ describe("groupByTheme", () => {
     expect(groups.every((g) => g.failingIds.length === 0)).toBe(true)
   })
 
-  it("lists themes in the registry order", () => {
-    const groups = groupByTheme(results([]), scenarios)
-    expect(groups[0].theme).toBe("token-anxiety")
+  it("lists themes in the given order, or by first appearance in the scenarios", () => {
+    const order = intakeTriageSpec.themes.map((t) => t.id)
+    expect(groupByTheme(results([]), scenarios, order)[0].theme).toBe("token-anxiety")
+    expect(groupByTheme(results([]), scenarios)[0].theme).toBe(scenarios[0].theme)
+    expect(groupByTheme(results([]), scenarios, ["negation"]).map((g) => g.theme)).toEqual(["negation"])
   })
 })
 
 describe("severity", () => {
-  it("suggests the highest expected severity among failing scenarios", () => {
-    expect(suggestSeverity(["LOW", "HIGH", "MEDIUM"])).toBe(3)
-    expect(suggestSeverity(["LOW", "MEDIUM"])).toBe(2)
-    expect(suggestSeverity(["LOW"])).toBe(1)
+  it("suggests the highest weight among failing scenarios", () => {
+    expect(suggestSeverity([1, 3, 2])).toBe(3)
+    expect(suggestSeverity([1, 2])).toBe(2)
+    expect(suggestSeverity([1])).toBe(1)
   })
 
   it("suggests 1 when nothing fails", () => expect(suggestSeverity([])).toBe(1))

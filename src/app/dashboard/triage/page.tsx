@@ -1,7 +1,10 @@
 import { auth } from "@/lib/auth"
 import { canViewTriage } from "@/lib/guards"
 import { formatDateTimeUtc, formatDateUtc } from "@/lib/evals/format"
-import { INTAKE_TRIAGE_ID } from "@/lib/evals/specialists"
+import { pickSpecialist, withSpecialist } from "@/lib/evals/picker"
+import { listSpecialists } from "@/lib/evals/specialist-store"
+import { prisma } from "@/lib/prisma"
+import SpecialistPicker from "@/components/SpecialistPicker"
 import { isTriageErrorCode, TRIAGE_ERROR_MESSAGES } from "@/lib/evals/triage-errors"
 import { getBacklog } from "@/lib/evals/triage-queries"
 import { EFFORT_LABEL, SEVERITY_LABEL, type Level } from "@/lib/evals/triage"
@@ -31,12 +34,24 @@ function Flags({ item }: { item: BacklogItem }) {
   )
 }
 
-export default async function TriagePage({ searchParams }: { searchParams: { error?: string } }) {
+export default async function TriagePage({ searchParams }: { searchParams: { error?: string; specialist?: string } }) {
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
   if (!canViewTriage(session.user.role)) redirect("/dashboard")
 
-  const backlog = await getBacklog(INTAKE_TRIAGE_ID)
+  const specialists = await listSpecialists(prisma)
+  const selected = pickSpecialist(specialists, searchParams.specialist)
+  if (!selected) {
+    return (
+      <article>
+        <header>
+          <h2>Triage</h2>
+        </header>
+        <EmptyState message="No specialists yet, so there is nothing to triage." actionHref="/dashboard/specialists/new" actionLabel="Create a specialist" />
+      </article>
+    )
+  }
+  const backlog = await getBacklog(selected.slug)
   // Only known error codes map to a message; any other query text is ignored.
   const error = isTriageErrorCode(searchParams.error) ? TRIAGE_ERROR_MESSAGES[searchParams.error] : null
   const { summary } = backlog
@@ -53,6 +68,8 @@ export default async function TriagePage({ searchParams }: { searchParams: { err
         </div>
       </header>
 
+      <SpecialistPicker specialists={specialists} selected={selected.slug} />
+
       {error && (
         <p role="alert">
           <small style={{ color: "var(--pico-del-color)" }}>{error}</small>
@@ -62,7 +79,7 @@ export default async function TriagePage({ searchParams }: { searchParams: { err
       {!backlog.reflects ? (
         <EmptyState
           message="No eval runs yet, so there is nothing to triage. Run an eval to find failure modes."
-          actionHref="/dashboard/evals"
+          actionHref={withSpecialist("/dashboard/evals", selected.slug)}
           actionLabel="Go to Evals"
         />
       ) : (
@@ -71,6 +88,9 @@ export default async function TriagePage({ searchParams }: { searchParams: { err
             <small>
               Reflects the latest <strong>{backlog.reflects.version}</strong> run, {formatDateTimeUtc(backlog.reflects.at)} UTC.
               Re-running an older version does not change it.
+              {backlog.instancesConsidered.length > 0 && (
+                <> The result is the worst case across {backlog.instancesConsidered.join(", ")}: a scenario counts as failing if it fails on any of them.</>
+              )}
             </small>
           </p>
 

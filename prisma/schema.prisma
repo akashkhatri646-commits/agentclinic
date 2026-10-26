@@ -120,15 +120,9 @@ model EvalResult {
   passed           Boolean
   category         String?
   reason           String?
-  expectedSeverity String
-  expectedTherapy  String
-  actualSeverity   String
-  actualTherapy    String
-  rationale        String
   judgeScore       Int?
   judgeNote        String?
-  // Generic shape (Phase 10): JSON text of expected and actual values by output field. The
-  // severity/therapy/rationale columns above are kept until the runner switches over.
+  // JSON text of expected and actual values by output field.
   expected         String  @default("{}")
   actual           String  @default("{}")
 

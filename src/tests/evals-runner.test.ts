@@ -5,6 +5,7 @@ import { INTAKE_TRIAGE_ID, getSpecialistVersion } from "../lib/evals/specialists
 import { INTAKE_TRIAGE_SCENARIOS } from "../lib/evals/scenarios/intake-triage"
 import { SEEDED_THERAPY_NAMES, THERAPY } from "../lib/evals/catalogue"
 import type { Judge } from "../lib/evals/types"
+import { intakeTriageRow, standardInstanceRow } from "./support/specialist-rows"
 
 // The triage sync has its own tests; here we only check that the runner calls it and survives its failure.
 vi.mock("../lib/evals/triage-sync", () => ({ syncFailureModes: vi.fn(async () => ({ created: 0, updated: 0, verified: 0, reappeared: 0 })) }))
@@ -26,7 +27,12 @@ function fakeDb(therapies: string[] = SEEDED_THERAPY_NAMES) {
     results: data.results.create,
   }))
   const findMany = vi.fn(async () => therapies.map((name) => ({ name })))
-  const db = { therapy: { findMany }, evalRun: { create } } as unknown as EvalDb
+  const db = {
+    therapy: { findMany },
+    evalRun: { create },
+    specialist: { findUnique: vi.fn(async ({ where }: { where: { slug: string } }) => (where.slug === INTAKE_TRIAGE_ID ? intakeTriageRow() : null)) },
+    instance: { findUnique: vi.fn(async ({ where }: { where: { slug: string } }) => (where.slug === standardInstanceRow.slug ? standardInstanceRow : null)) },
+  } as unknown as EvalDb
   return { db, create, findMany }
 }
 
@@ -77,9 +83,7 @@ describe("runEval", () => {
 
   it("rejects an unknown specialist", async () => {
     const fake = fakeDb()
-    await expect(runEval({ specialistId: "nope", version: "v1", db: fake.db })).rejects.toThrow(
-      "Unknown specialist version"
-    )
+    await expect(runEval({ specialistId: "nope", version: "v1", db: fake.db })).rejects.toThrow("Unknown specialist: nope")
   })
 
   it("gives failed results a category and a reason, and passed results neither", async () => {
@@ -249,7 +253,7 @@ describe("database client (review finding #6)", () => {
   })
 
   it("does not load the shared client for an unknown version", async () => {
-    await expect(runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v9" })).rejects.toThrow("Unknown")
+    await expect(runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v9", db: fakeDb().db })).rejects.toThrow("Unknown")
     expect(prismaLoaded).not.toHaveBeenCalled()
   })
 
@@ -263,9 +267,9 @@ describe("environment handling", () => {
   it("fails scenarios whose therapy was removed from the catalogue, without crashing", async () => {
     const fake = fakeDb(SEEDED_THERAPY_NAMES.filter((n) => n !== THERAPY.TOKEN_BUDGET_RELIEF))
     const r = await runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v2", db: fake.db })
-    const missing = r.results.filter((x) => x.category === "THERAPY_NOT_IN_CATALOGUE")
+    const missing = r.results.filter((x) => x.category === "NOT_IN_REFERENCE:therapy")
     expect(missing.length).toBeGreaterThan(0)
-    expect(missing.every((x) => x.actualTherapy === THERAPY.TOKEN_BUDGET_RELIEF)).toBe(true)
+    expect(missing.every((x) => JSON.parse(x.actual as string).therapy === THERAPY.TOKEN_BUDGET_RELIEF)).toBe(true)
     expect(r.verdict).toBe("FAIL")
   })
 
@@ -274,8 +278,8 @@ describe("environment handling", () => {
     const r = await runEval({ specialistId: INTAKE_TRIAGE_ID, version: "v2", db: fake.db })
     expect(r.verdict).toBe("FAIL")
     expect(r.devPassed + r.holdoutPassed).toBe(0)
-    expect(r.verdictReason).toContain("catalogue is empty")
-    expect(r.results.every((x) => x.category === "THERAPY_NOT_IN_CATALOGUE")).toBe(true)
+    expect(r.verdictReason).toContain('The "therapies" list is empty for Standard clinic')
+    expect(r.results.every((x) => (x.category as string).includes("NOT_IN_REFERENCE:therapy"))).toBe(true)
   })
 })
 
@@ -305,12 +309,12 @@ describe("optional judge", () => {
     expect(r.results.find((x) => x.scenarioId === "d01")).toMatchObject({ passed: true, judgeScore: 5 })
   })
 
-  it("fails a scenario with category RATIONALE on a low score", async () => {
+  it("fails a scenario with category JUDGE:rationale on a low score", async () => {
     judge.score.mockResolvedValue({ score: 2, note: "Generic." })
     const r = await run("v2", { judge }).promise
     const row = r.results.find((x) => x.scenarioId === "d01")!
     expect(row.passed).toBe(false)
-    expect(row.category).toBe("RATIONALE")
+    expect(row.category).toBe("JUDGE:rationale")
     expect(row.reason).toContain("scored 2/5")
     expect(r.verdict).toBe("FAIL")
   })
@@ -335,17 +339,17 @@ describe("optional judge", () => {
     judge.score.mockRejectedValue(new Error("401 invalid key"))
     const r = await run("v2", { judge }).promise
     expect(r.judgeEnabled).toBe(true)
-    expect(r.verdictReason).toContain("scored only 0 of 29 rationales")
+    expect(r.verdictReason).toContain("scored only 0 of 29 answers")
     expect(r.verdictReason).toContain("not graded")
   })
 
-  it("says so when the judge scores only some rationales", async () => {
+  it("says so when the judge scores only some answers", async () => {
     let calls = 0
     judge.score.mockImplementation(async () =>
       ++calls % 2 === 0 ? { score: null, note: "Malformed reply." } : { score: 5, note: "Grounded." }
     )
     const r = await run("v2", { judge }).promise
-    expect(r.verdictReason).toContain("scored only 15 of 29 rationales")
+    expect(r.verdictReason).toContain("scored only 15 of 29 answers")
   })
 
   it("adds no warning when the judge scored everything it was asked about", async () => {

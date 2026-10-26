@@ -1,7 +1,8 @@
 import { auth } from "@/lib/auth"
 import { canManageTriage, canViewTriage } from "@/lib/guards"
 import { formatDateTimeUtc, formatDateUtc } from "@/lib/evals/format"
-import { INTAKE_TRIAGE_ID, listVersions } from "@/lib/evals/specialists"
+import { getVersionLabels } from "@/lib/evals/queries"
+import { withSpecialist } from "@/lib/evals/picker"
 import { isTriageErrorCode, TRIAGE_ERROR_MESSAGES } from "@/lib/evals/triage-errors"
 import { getAssignableOwners, getFailureModeDetail, type FixDetail } from "@/lib/evals/triage-queries"
 import { EFFORT_LABEL, SEVERITY_LABEL, nextStatuses, type Level } from "@/lib/evals/triage"
@@ -147,7 +148,7 @@ export default async function FailureModePage({
 
   const canEdit = canManageTriage(session.user.role)
   const owners = canEdit ? await getAssignableOwners() : []
-  const versions = listVersions(INTAKE_TRIAGE_ID).map((v) => v.version)
+  const versions = await getVersionLabels(detail.specialistId)
   const error = isTriageErrorCode(searchParams.error) ? TRIAGE_ERROR_MESSAGES[searchParams.error] : null
   const { mode } = detail
   const open = mode.status === "OPEN"
@@ -167,7 +168,7 @@ export default async function FailureModePage({
             )}
           </p>
         </div>
-        <Link href="/dashboard/triage" role="button" className="outline">
+        <Link href={withSpecialist("/dashboard/triage", detail.specialistId)} role="button" className="outline">
           ← Back
         </Link>
       </header>
@@ -246,6 +247,7 @@ export default async function FailureModePage({
                 <th scope="col">Scenario</th>
                 <th scope="col">Set</th>
                 <th scope="col">Result</th>
+                <th scope="col">Fails on</th>
                 <th scope="col">Expected</th>
                 <th scope="col">Description</th>
               </tr>
@@ -259,9 +261,8 @@ export default async function FailureModePage({
                     {s.passing === null ? "Not evaluated" : s.passing ? "Passing" : "Failing"}
                     {s.regressed && <span className="badge badge-flag">Regressed</span>}
                   </td>
-                  <td>
-                    {s.expectedSeverity.toLowerCase()}, {s.expectedTherapy}
-                  </td>
+                  <td>{s.failingInstances.length > 0 ? s.failingInstances.join(", ") : "None"}</td>
+                  <td className="wrap-cell">{s.expectedText}</td>
                   <td className="wrap-cell">{s.description}</td>
                 </tr>
               ))}
@@ -269,6 +270,14 @@ export default async function FailureModePage({
           </table>
         </figure>
         <small>A regressed scenario passed in the previous version and fails now.</small>
+        {detail.instancesConsidered.length > 0 && (
+          <p>
+            <small>
+              The result is the worst case across {detail.instancesConsidered.join(", ")}: a scenario fails here if it fails on any
+              of them.{detail.lastRunInstance && <> This failure mode was last updated by the run on {detail.lastRunInstance}.</>}
+            </small>
+          </p>
+        )}
       </section>
 
       <section aria-labelledby="fixes-heading">

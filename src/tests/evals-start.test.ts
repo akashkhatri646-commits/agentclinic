@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { EVAL_ERROR_MESSAGES, isEvalErrorCode, startEvalRun } from "../lib/evals/start"
-import { runEval } from "../lib/evals/runner"
+import { ALL_INSTANCES, EVAL_ERROR_MESSAGES, isEvalErrorCode, startEvalRun } from "../lib/evals/start"
+import { runEval, type EvalDb } from "../lib/evals/runner"
 import { createAnthropicJudge, isJudgeConfigured } from "../lib/evals/judge"
+import { SEEDED_INSTANCES } from "../lib/evals/instances"
+import { intakeTriageRow, specialistRow } from "./support/specialist-rows"
+import { intakeTriageSpec } from "../lib/evals/builtin-spec"
 
 vi.mock("../lib/evals/runner", () => ({ runEval: vi.fn() }))
 vi.mock("../lib/evals/judge", () => ({
@@ -9,7 +12,35 @@ vi.mock("../lib/evals/judge", () => ({
   isJudgeConfigured: vi.fn(),
 }))
 
-const input = { role: "STAFF", userId: "user-1", version: "v2", useJudge: false }
+/** A database with the seeded intake-triage specialist (v1, v2 from code), one imported specialist, and the three instances. */
+function fakeDb() {
+  const imported = specialistRow({ ...intakeTriageSpec, slug: "ticket-router" }, [
+    { label: "v1", releasedAt: new Date("2026-10-01T00:00:00Z"), builtinKey: null },
+  ])
+  const db = {
+    specialist: {
+      findUnique: vi.fn(async ({ where }: { where: { slug: string } }) =>
+        where.slug === "intake-triage" ? intakeTriageRow() : where.slug === "ticket-router" ? imported : null
+      ),
+    },
+    instance: {
+      findMany: vi.fn(async () =>
+        SEEDED_INSTANCES.map((i) => ({ ...i, referenceLists: i.referenceLists ? JSON.stringify(i.referenceLists) : null }))
+      ),
+    },
+  } as unknown as EvalDb
+  return db
+}
+
+const input = {
+  role: "STAFF",
+  userId: "user-1",
+  specialist: "intake-triage",
+  version: "v2",
+  instance: "standard-clinic",
+  useJudge: false,
+}
+const start = (over: Partial<typeof input> = {}) => startEvalRun({ ...input, ...over, db: fakeDb() })
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -19,13 +50,13 @@ beforeEach(() => {
 
 describe("startEvalRun access", () => {
   it.each([["STAFF"], ["ADMIN"]])("lets %s start a run", async (role) => {
-    expect(await startEvalRun({ ...input, role })).toEqual({ ok: true, runId: "run-9" })
+    expect(await start({ role })).toEqual({ ok: true, runId: "run-9", runIds: ["run-9"] })
   })
 
   it.each([["AGENT"], [""], ["staff"], ["SUPERUSER"]])(
     "rejects role %j and never runs anything",
     async (role) => {
-      expect(await startEvalRun({ ...input, role })).toEqual({ ok: false, code: "forbidden" })
+      expect(await start({ role })).toEqual({ ok: false, code: "forbidden" })
       expect(runEval).not.toHaveBeenCalled()
     }
   )
@@ -33,21 +64,43 @@ describe("startEvalRun access", () => {
 
 describe("startEvalRun validation", () => {
   it.each([["v9"], [""], ["V2"], ["v2 "]])("rejects the unknown version %j", async (version) => {
-    expect(await startEvalRun({ ...input, version })).toEqual({ ok: false, code: "unknown-version" })
+    expect(await start({ version })).toEqual({ ok: false, code: "unknown-version" })
     expect(runEval).not.toHaveBeenCalled()
   })
 
-  it("records who triggered the run", async () => {
-    await startEvalRun(input)
+  it.each([["nope"], [""], ["Intake-Triage"], ["__proto__"]])("rejects the unknown specialist %j", async (specialist) => {
+    expect(await start({ specialist })).toEqual({ ok: false, code: "unknown-specialist" })
+    expect(runEval).not.toHaveBeenCalled()
+  })
+
+  it.each([["nowhere"], [""], ["Standard-Clinic"]])("rejects the unknown instance %j", async (instance) => {
+    expect(await start({ instance })).toEqual({ ok: false, code: "unknown-instance" })
+    expect(runEval).not.toHaveBeenCalled()
+  })
+
+  it("asks for outputs, and runs nothing, for a version that does not run from code", async () => {
+    expect(await start({ specialist: "ticket-router", version: "v1" })).toEqual({ ok: false, code: "needs-outputs" })
+    expect(runEval).not.toHaveBeenCalled()
+  })
+
+  it("records who triggered the run, and on which instance", async () => {
+    await start({ instance: "short-staffed-clinic" })
     expect(runEval).toHaveBeenCalledWith(
-      expect.objectContaining({ specialistId: "intake-triage", version: "v2", triggeredBy: "user-1" })
+      expect.objectContaining({ specialistId: "intake-triage", version: "v2", instance: "short-staffed-clinic", triggeredBy: "user-1" })
     )
+  })
+
+  it("runs once on every instance, in order, for 'all'", async () => {
+    vi.mocked(runEval).mockResolvedValueOnce({ id: "r1" } as never).mockResolvedValueOnce({ id: "r2" } as never).mockResolvedValueOnce({ id: "r3" } as never)
+    const result = await start({ instance: ALL_INSTANCES })
+    expect(result).toEqual({ ok: true, runId: "r3", runIds: ["r1", "r2", "r3"] })
+    expect(vi.mocked(runEval).mock.calls.map((c) => c[0].instance)).toEqual(SEEDED_INSTANCES.map((i) => i.slug))
   })
 
   it("reports run-failed, without throwing, when the runner fails", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {})
     vi.mocked(runEval).mockRejectedValue(new Error("db down"))
-    expect(await startEvalRun(input)).toEqual({ ok: false, code: "run-failed" })
+    expect(await start()).toEqual({ ok: false, code: "run-failed" })
     spy.mockRestore()
   })
 })
@@ -55,13 +108,13 @@ describe("startEvalRun validation", () => {
 describe("startEvalRun judge", () => {
   it("does not create a judge when it was not requested", async () => {
     vi.mocked(isJudgeConfigured).mockReturnValue(true)
-    await startEvalRun({ ...input, useJudge: false })
+    await start({ useJudge: false })
     expect(createAnthropicJudge).not.toHaveBeenCalled()
     expect(vi.mocked(runEval).mock.calls[0][0].judge).toBeNull()
   })
 
   it("ignores the request when no judge is configured", async () => {
-    await startEvalRun({ ...input, useJudge: true })
+    await start({ useJudge: true })
     expect(createAnthropicJudge).not.toHaveBeenCalled()
     expect(vi.mocked(runEval).mock.calls[0][0].judge).toBeNull()
   })
@@ -70,7 +123,7 @@ describe("startEvalRun judge", () => {
     const judge = { score: vi.fn() }
     vi.mocked(isJudgeConfigured).mockReturnValue(true)
     vi.mocked(createAnthropicJudge).mockResolvedValue(judge)
-    await startEvalRun({ ...input, useJudge: true })
+    await start({ useJudge: true })
     expect(vi.mocked(runEval).mock.calls[0][0].judge).toBe(judge)
   })
 })
@@ -83,6 +136,7 @@ describe("error codes", () => {
   it("only recognises known codes, so arbitrary query text is never shown", () => {
     expect(isEvalErrorCode("forbidden")).toBe(true)
     expect(isEvalErrorCode("run-failed")).toBe(true)
+    expect(isEvalErrorCode("needs-outputs")).toBe(true)
     expect(isEvalErrorCode("Your session expired, call support")).toBe(false)
     expect(isEvalErrorCode("toString")).toBe(false)
     expect(isEvalErrorCode("__proto__")).toBe(false)
