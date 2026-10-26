@@ -1,10 +1,19 @@
-import { describe, it, expect, vi, afterEach } from "vitest"
+import { describe, it, expect, vi, afterEach, beforeAll } from "vitest"
 import {
   JUDGE_MODEL,
   createAnthropicJudge,
   isJudgeConfigured,
   type JudgeClient,
 } from "../lib/evals/judge"
+
+// The judge loads zod and the SDK's zod helper with dynamic imports. The first test to
+// trigger them pays the cold import cost, which takes about 80 ms warm but can be much
+// longer on a cold cache when the whole suite starts at once, and once failed a test on
+// the 5 second default. Loading them here keeps that cost out of any single test's budget.
+beforeAll(async () => {
+  await import("zod")
+  await import("@anthropic-ai/sdk/helpers/zod")
+}, 30_000)
 
 function fakeClient(reply: { stop_reason?: string | null; parsed_output: unknown } | Error) {
   const parse = vi.fn(async () => {
