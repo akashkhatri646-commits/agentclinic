@@ -35,3 +35,6 @@ CHANGELOG.md
 
 # Local changelog command (kept on this machine, with the changelog it writes)
 .claude/commands/update-changelog.md
+
+# Local prompt notes (kept on this machine, not published)
+prompts.md

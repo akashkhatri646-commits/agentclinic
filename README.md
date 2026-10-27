@@ -46,7 +46,7 @@ The clinic is the environment under test. The product thinking is in how to run 
 - [`specs/roadmap.md`](specs/roadmap.md): phase-by-phase delivery plan and status.
 - [`specs/follow-ups.md`](specs/follow-ups.md): known issues and deferred work.
 - [`specs/tech-stack.md`](specs/tech-stack.md): stack and conventions.
-- [`prompts.md`](prompts.md): the opening prompts. Each phase after that has its own spec folder under `specs/` (requirements, plan, validation).
+- `specs/<date>-phase-<n>-*/`: one folder per phase with its requirements, plan and validation.
 
 ## Run locally
 
@@ -139,9 +139,3 @@ With the app running on port 3100 and the database seeded (`npm run build`, then
 ## Stack
 
 Next.js 14 (App Router), TypeScript (strict), Prisma + SQLite, Auth.js, PicoCSS, Vitest. Runs fully locally with no external services.
-
-## Original stakeholder input
-
-- Mary in engineering wants a reliable site with a popular stack based on TypeScript, giving agents and staff a dashboard for easy access.
-- Susan in product has a set of features about agents and their ailments, therapies, and booking appointments.
-- Steve in marketing wants an attractive site that works well with a modern browser.

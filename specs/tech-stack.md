@@ -2,7 +2,7 @@
 
 ## Overview
 
-AgentClinic is built on a modern, TypeScript-first stack optimised for developer experience, reliability, and a polished browser experience. It is designed to run entirely locally with no external cloud services required — making it ideal for course students and conference demos.
+AgentClinic is built on a modern, TypeScript-first stack optimised for developer experience, reliability, and a polished browser experience. It is designed to run entirely locally with no external cloud services required — so anyone can clone it and run it.
 
 ## Stack
 

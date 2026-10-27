@@ -16,7 +16,7 @@ Stand up a working Next.js application that any team member can clone, install, 
 ## Key decisions
 
 **Prisma + SQLite over Supabase**
-Local-first design — no cloud account, no internet required. This directly serves course students running the project for the first time and developers demoing at conference booths. SQLite file lives at `prisma/dev.db` and is never committed.
+Local-first design — no cloud account, no internet required. This lets anyone run the project for the first time without setup beyond Node. SQLite file lives at `prisma/dev.db` and is never committed.
 
 **Auth.js credentials provider (email + password)**
 Simplest auth flow for a local-first app. OAuth providers (GitHub, Google) are deferred to a later phase when deployment to a live environment is prioritised.
