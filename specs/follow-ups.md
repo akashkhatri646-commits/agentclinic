@@ -104,6 +104,12 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 - The migrations were applied to the development database that held Phase 7 to 9 data, with row counts compared; they were not tried on a copy of anyone else's data. The upgrade path (`migrate deploy`, then `npm run db:upgrade`) was run on a copy of that database with its specialists and instances removed: runs, results, failure modes and fixes were unchanged afterwards and the specialist, instances and versions came back.
 - The playbook has not been followed cold by someone who did not build the app.
 
+## Ideas from the example specs
+
+| Area | Issue | Impact | Suggested fix |
+|---|---|---|---|
+| Small samples | The adoption and loop-time numbers (a median over a handful of specialists, a percentage of four) are shown as plain figures. The example specs hold a score back until it has at least 5 outcomes | A reader may take 66.7% of 4 specialists as a trend | Below a minimum count, show the number with "too few to judge" beside it, and keep the sample notice. A small change to the Metrics page and its pure logic |
+
 ## Design notes
 
 - Discharging an `OPEN` ailment with no therapy is allowed (the Phase 6 plan permits it). The agent's notification then points to a history that only shows intake and discharge.
