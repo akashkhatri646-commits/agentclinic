@@ -14,6 +14,10 @@ The clinic is the environment under test. The product thinking is in how to run 
 |---|
 | ![Metrics page with the pass-rate chart and per-version table](docs/screenshots/metrics.png) |
 
+| Specialists: any team's specialist, with owner, size and onboarding progress (sample data flagged) | Onboarding: a checklist that ticks from real data |
+|---|---|
+| ![Specialists list](docs/screenshots/specialists.png) | ![Onboarding checklist](docs/screenshots/onboarding.png) |
+
 ## What's here
 
 | Area | Status | Where |

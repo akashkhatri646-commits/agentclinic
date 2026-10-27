@@ -1,6 +1,5 @@
 import { auth } from "@/lib/auth"
 import { canCreateSpecialist, canViewSpecialists } from "@/lib/guards"
-import { formatDateUtc } from "@/lib/evals/format"
 import { summariseOnboarding } from "@/lib/evals/onboarding"
 import { loadOnboardingFacts } from "@/lib/evals/onboarding-queries"
 import { listSpecialists } from "@/lib/evals/specialist-store"
@@ -65,7 +64,6 @@ export default async function SpecialistsPage() {
                 <th scope="col">Runs</th>
                 <th scope="col">Instances</th>
                 <th scope="col">Onboarding</th>
-                <th scope="col">Created (UTC)</th>
               </tr>
             </thead>
             <tbody>
@@ -91,7 +89,6 @@ export default async function SpecialistsPage() {
                         "Unknown"
                       )}
                     </td>
-                    <td>{formatDateUtc(s.createdAt)}</td>
                   </tr>
                 )
               })}
