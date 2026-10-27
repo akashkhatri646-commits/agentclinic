@@ -29,3 +29,6 @@ prisma/prisma/
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Local build log (kept on this machine, not published)
+CHANGELOG.md

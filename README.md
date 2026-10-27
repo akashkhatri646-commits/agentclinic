@@ -46,7 +46,7 @@ The clinic is the environment under test. The product thinking is in how to run 
 - [`specs/roadmap.md`](specs/roadmap.md): phase-by-phase delivery plan and status.
 - [`specs/follow-ups.md`](specs/follow-ups.md): known issues and deferred work.
 - [`specs/tech-stack.md`](specs/tech-stack.md): stack and conventions.
-- [`prompts.md`](prompts.md) and [`CHANGELOG.md`](CHANGELOG.md): how the project was built with an AI coding agent using spec-driven development.
+- [`prompts.md`](prompts.md): how the project was built with an AI coding agent using spec-driven development.
 
 ## Run locally
 

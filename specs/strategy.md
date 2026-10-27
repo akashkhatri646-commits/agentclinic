@@ -119,4 +119,4 @@ Cadence: weekly metrics review; per-team loop check-in; monthly cross-team reado
 
 ## 12. Method note
 
-This repo is built with spec-driven development using an AI coding agent: constitution, then per-phase specs, then implementation. `prompts.md` and `CHANGELOG.md` record the process.
+This repo is built with spec-driven development using an AI coding agent: constitution, then per-phase specs, then implementation. `prompts.md` records the process.
