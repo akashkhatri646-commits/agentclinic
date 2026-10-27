@@ -2,6 +2,7 @@
   "name": "agentclinic",
   "version": "0.1.0",
   "private": true,
+  "description": "A worked example of self-serve hill climbing for AI Specialists, built on a clinic domain.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

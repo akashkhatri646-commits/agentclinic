@@ -8,12 +8,12 @@ Delivery is split into small, shippable phases. Each phase produces working, dep
 
 Goal: a deployable skeleton that any team member can run locally and that handles sign-in/sign-out.
 
-- Initialise Next.js 14 project with TypeScript and Tailwind CSS
+- Initialise Next.js 14 project with TypeScript and Tailwind CSS (delivered with PicoCSS instead, from Phase 2)
 - Add Prisma with SQLite adapter; commit `schema.prisma`, add `prisma/dev.db` to `.gitignore`
 - Implement Auth.js (NextAuth) with credentials provider; add `AUTH_SECRET` to `.env.local`
 - Basic layout: top navigation bar, sidebar placeholder, responsive shell
 - Role seed: `agent`, `staff`, `admin` (seeded via `prisma/seed.ts`)
-- Deploy to Vercel with preview environments
+- Deploy to Vercel with preview environments (not done: the app is local first; see `specs/tech-stack.md`)
 - Vitest setup; unit tests for role utilities
 
 ---

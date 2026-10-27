@@ -46,11 +46,11 @@ The clinic is the environment under test. The product thinking is in how to run 
 - [`specs/roadmap.md`](specs/roadmap.md): phase-by-phase delivery plan and status.
 - [`specs/follow-ups.md`](specs/follow-ups.md): known issues and deferred work.
 - [`specs/tech-stack.md`](specs/tech-stack.md): stack and conventions.
-- [`prompts.md`](prompts.md): how the project was built with an AI coding agent using spec-driven development.
+- [`prompts.md`](prompts.md): the opening prompts. Each phase after that has its own spec folder under `specs/` (requirements, plan, validation).
 
 ## Run locally
 
-Requires Node.js 18+.
+Requires Node.js 22.22 or newer (the tests need it; the app itself runs on Node 18.17+). Developed and tested on Node 24.
 
 ```bash
 npm install
@@ -61,6 +61,16 @@ npm run dev
 ```
 
 Open http://localhost:3000. Run tests with `npm test`.
+
+**Demo accounts** (created by the seed, local use only):
+
+| Role | Email | Password | Sees |
+|---|---|---|---|
+| Staff | `staff@clinic.local` | `password123` | Everything except user admin: evals, metrics, triage, specialists, onboarding |
+| Admin | `admin@clinic.local` | `password123` | Everything, including user management |
+| Agent | `agent@clinic.local` | `password123` | Only its own ailments, appointments and notifications |
+
+**A five-minute tour.** Sign in as staff. Open **Evals** and compare `v1` (FAIL) with `v2` (PASS). Open **Metrics** for the loop-time story and the hill-climbing chart. Open **Triage** for the ranked fix backlog and the fixes verified by a later run. Open **Specialists** and **Onboarding** to see a team's own specialist go from template to verified fix. Then follow the [playbook](docs/playbook.md) to onboard one yourself.
 
 **After pulling a new version** of a database you want to keep, run `npx prisma migrate deploy` and then `npm run db:upgrade`. Phase 10 moved the specialists, scenarios and customer instances into the database; the upgrade adds the built-in specialist, its versions and the instances, and never touches your runs, failure modes or fixes (it is safe to run again). `npx prisma db seed` does the same for a fresh database but also resets the demo data, so do not use it on one you want to keep.
 
@@ -83,6 +93,7 @@ npm run eval -- --judge                       # also score the judged field with
 `/dashboard/metrics` (staff and admin) shows how quickly a shipped change gets a verdict and how quality moves between versions: median loop time against a 3-day target, the baseline and latest loop times, pass rate per version, scenarios fixed and regressions detected, and a chart of dev and hold-out pass rate across versions. A median loop time tile is also on the staff dashboard.
 
 **The seeded timings are illustrative sample data.** To make a fresh install show a weeks-to-days story, the seed records `v1` as taking 21 days to get a verdict and `v2` as taking 2. Those times were invented. The scenario results, pass rates and comparisons on those runs are real, because they come from running the harness. Sample runs are flagged `isSample` and labelled wherever they appear, and any run you start yourself is real and is never flagged.
+
 ## Triage
 
 `/dashboard/triage` (staff and admin) turns eval failures into a ranked fix backlog. Each golden scenario carries a theme (for example negation, fabrication vocabulary, sarcasm and idiom), and failing scenarios are grouped by theme into **failure modes**. Failure modes are created and updated automatically after every eval run.
@@ -94,6 +105,7 @@ npm run eval -- --judge                       # also score the judged field with
 - A failure mode follows the latest version that has been evaluated, so re-running an older version never reopens what a newer one fixed.
 
 **The seeded fixes are illustrative sample data**: their titles, owners and dates were made up, they are flagged `isSample`, and they send no notifications. The failure modes, scores and the verification of the fixes shipped in `v2` are real: they come from the seeded runs and from the real sync rules. To see a failure mode reappear, delete an unused therapy (Human Expectation Recalibration) and re-run `v2`; `npx prisma db seed` restores everything.
+
 ## Self-serve onboarding
 
 A team brings its own AI specialist without anyone from the core team in the room. The full walk-through, with the common errors, is the [playbook](docs/playbook.md).
@@ -115,6 +127,14 @@ Triage, metrics and fix verification take the **worst case across instances**: a
 ## Accessibility and responsive audit
 
 With the app running on port 3100 and the database seeded (`npm run build`, then `AUTH_TRUST_HOST=true npm start -- -p 3100`), `npm run audit` signs in as each role and checks every page at 375, 768 and 1280 px for horizontal overflow and WCAG 2.1 A/AA violations (axe-core). It also confirms agents cannot open the evals, specialists or onboarding pages. `AUDIT_ONLY=/dashboard/specialists` limits it to one part of the app. Needs Chrome.
+
+## Status and limits
+
+- **Local demo, not a hosted service.** It runs on SQLite with seeded demo accounts. Do not expose it to the internet as it stands.
+- **Verified:** 957 automated tests; type-check, lint and production build clean; the steps above work on a fresh clone; an accessibility and responsive audit of every page for each role; scripted browser walks of the main flows.
+- **Not verified:** a by-hand walk of the newest pages, a screen-reader pass, and the optional LLM judge against the real API.
+- **Known issues and deferred work** are listed with their impact in [`specs/follow-ups.md`](specs/follow-ups.md), including open review findings and dependency advisories.
+- **Sample data is labelled.** Timings, owners and the adoption story on a fresh install are invented to show the idea; scenario results are real.
 
 ## Stack
 

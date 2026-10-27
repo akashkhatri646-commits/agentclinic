@@ -32,3 +32,6 @@ prisma/prisma/
 
 # Local build log (kept on this machine, not published)
 CHANGELOG.md
+
+# Local changelog command (kept on this machine, with the changelog it writes)
+.claude/commands/update-changelog.md

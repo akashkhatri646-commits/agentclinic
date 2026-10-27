@@ -167,7 +167,7 @@ async function main() {
     create: {
       userId: adminUser.id,
       name: "Claude-3-Haiku",
-      model: "claude-3-haiku-20240307",
+      model: "claude-haiku-5-5",
     },
   })
 

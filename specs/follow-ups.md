@@ -32,7 +32,6 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 | Scenarios and specialists | Defined in code, not data | Adding a scenario or specialist means a code change | Resolved in Phase 10: specialists, scenarios and instances live in the database and are added by pasting a config. The built-in specialist's rules (`v1`, `v2`) are still code |
 | Concurrency and cost | Two runs can be started at once, there is no throttle, and runs cannot be deleted. With the judge on, each run makes one small Haiku call per passing scenario (about 30) | Extra rows, and API spend that is unbounded in principle (cents per run in practice); staff-only | Optional: disable the button while a run is in flight, rate-limit the action, add run deletion |
 | Unknown run id | Returns HTTP 200 with the not-found page | Same for every route with a loading skeleton; only matters to tools that read the status code | Accept, or drop the skeleton on that route |
-| Demo data | `prisma/seed.ts` names a demo agent's model `claude-3-haiku-20240307`, a retired model id | Cosmetic; no API call uses it | Rename to a current model string |
 | Header at 375 px | The header now wraps onto several lines | Works, but a proper mobile menu would be tidier | Collapse the nav behind a menu button on small screens |
 | Process | Phase 6's "no horizontal overflow" check passed while the Sign out button was clipped off-screen at 375 px, because the layout hides overflow instead of scrolling | Fixed in Phase 7; `npm run audit` now checks the button is on screen | Keep that check; consider an explicit visual review at 375 px for any header change |
 
@@ -109,6 +108,14 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 | Area | Issue | Impact | Suggested fix |
 |---|---|---|---|
 | Small samples | The adoption and loop-time numbers (a median over a handful of specialists, a percentage of four) are shown as plain figures. The example specs hold a score back until it has at least 5 outcomes | A reader may take 66.7% of 4 specialists as a trend | Below a minimum count, show the number with "too few to judge" beside it, and keep the sample notice. A small change to the Metrics page and its pure logic |
+
+## Release readiness
+
+| Area | Issue | Impact | Suggested fix |
+|---|---|---|---|
+| Dependency advisories | `npm audit --omit=dev` reports advisories in Next.js 14.2.35 (denial of service via the image optimizer and server components, request smuggling in rewrites) and in the PostCSS copy bundled with it. The only fix npm offers is a major upgrade to Next 16 | The app is meant to run locally, does not use rewrites or remote images, and is not hardened for public exposure; a hosted deployment would need the upgrade first | Upgrade Next.js in its own phase, with the full test and audit suite, before any hosting |
+| Error pages | There is no custom `not-found` or `error` page, so an unknown address or an unexpected error shows the framework default | Works, but off-brand and without a way back to the dashboard | Add `not-found.tsx` and `error.tsx` with a link home |
+| No licence | The repository has no licence file | By default others may read it but not reuse it | Add a licence if reuse is intended |
 
 ## Design notes
 
