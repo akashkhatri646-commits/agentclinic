@@ -132,9 +132,9 @@ With the app running on port 3100 and the database seeded (`npm run build`, then
 
 ## Status and limits
 
-- **Local demo, not a hosted service.** It runs on SQLite with seeded demo accounts. Do not expose it to the internet as it stands.
-- **Verified:** 957 automated tests; type-check, lint and production build clean; the steps above work on a fresh clone; an accessibility and responsive audit of every page for each role; scripted browser walks of the main flows.
-- **Not verified:** a by-hand walk of the newest pages, a screen-reader pass, and the optional LLM judge against the real API.
+- **Local demo, not a hosted service.** It runs on SQLite with seeded demo accounts.
+- **Verified:** 957 automated tests; type-check, lint and production build clean; the steps above work on a fresh clone; an accessibility and responsive audit of every page for each role; scripted browser walks of the main flows; the newest pages (Evals, Metrics, Triage, Specialists, Onboarding) walked through by hand in a browser.
+- **Not verified:** a screen-reader pass, and the optional LLM judge against the real API.
 - **Known issues and deferred work** are listed with their impact in [`specs/follow-ups.md`](specs/follow-ups.md), including open review findings and dependency advisories.
 - **Sample data is labelled.** Timings, owners and the adoption story on a fresh install are invented to show the idea; scenario results are real.
 

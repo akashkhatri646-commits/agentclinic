@@ -37,8 +37,8 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 
 ### Not verified in Phase 7
 
-- The manual flows in `specs/2026-10-25-phase-7-eval-harness/validation.md` were checked over HTTP and in headless Chrome, not walked through by hand in a browser.
-- The README run-locally steps have still not been tested on a clean clone.
+- The manual flows in `specs/2026-10-25-phase-7-eval-harness/validation.md` were checked over HTTP and in headless Chrome, then walked through by hand in a browser (October 2026).
+- The README run-locally steps were later tested on a clean clone.
 
 ## Phase 8 (loop-time metrics)
 
@@ -53,7 +53,7 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 
 ### Not verified in Phase 8
 
-- The manual flows in `specs/2026-10-25-phase-8-loop-time-metrics/validation.md` were checked over HTTP and in headless Chrome, not by hand in a browser.
+- The manual flows in `specs/2026-10-25-phase-8-loop-time-metrics/validation.md` were checked over HTTP and in headless Chrome, then walked through by hand in a browser (October 2026).
 - The chart was checked in headless Chrome screenshots and by the axe audit, not with a screen reader.
 
 ## Phase 9 (failure triage)
@@ -73,7 +73,7 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 
 ### Not verified in Phase 9
 
-- The manual flows in `specs/2026-10-26-phase-9-failure-triage/validation.md` were exercised over HTTP and in headless Chrome, not by hand in a browser, and the pages were not tested with a screen reader.
+- The manual flows in `specs/2026-10-26-phase-9-failure-triage/validation.md` were exercised over HTTP and in headless Chrome, then walked through by hand in a browser (October 2026). The pages were not tested with a screen reader.
 - The reappearance flow was checked by deleting the therapy directly in the database, not through the Therapies page.
 
 ## Phase 10 (self-serve onboarding and customer instances)
@@ -97,7 +97,7 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 
 ### Not verified in Phase 10
 
-- The manual flows in `specs/2026-10-26-phase-10-self-serve-onboarding/validation.md` were exercised in headless Chrome (a scripted walk from template to verified fix, the instance spread and the permission checks), not by hand in a browser, and the new pages were not tested with a screen reader.
+- The manual flows in `specs/2026-10-26-phase-10-self-serve-onboarding/validation.md` were exercised in headless Chrome (a scripted walk from template to verified fix, the instance spread and the permission checks), then walked through by hand in a browser (October 2026). The new pages were not tested with a screen reader.
 - The LLM judge on an imported specialist has not run against the real API.
 - Uploading a file into the paste box was not exercised (the box was filled by script).
 - The migrations were applied to the development database that held Phase 7 to 9 data, with row counts compared; they were not tried on a copy of anyone else's data. The upgrade path (`migrate deploy`, then `npm run db:upgrade`) was run on a copy of that database with its specialists and instances removed: runs, results, failure modes and fixes were unchanged afterwards and the specialist, instances and versions came back.
