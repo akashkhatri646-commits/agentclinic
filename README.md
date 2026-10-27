@@ -1,5 +1,7 @@
 # AgentClinic
 
+[![CI](https://github.com/akashkhatri646-commits/agentclinic/actions/workflows/ci.yml/badge.svg)](https://github.com/akashkhatri646-commits/agentclinic/actions/workflows/ci.yml)
+
 **A worked example of self-serve hill climbing for AI Specialists**, built on a clinic domain where AI agents present ailments, receive therapies, and book appointments.
 
 The clinic is the environment under test. The product thinking is in how to run the improvement loop (test, find failures, prioritize fixes, ship, re-test) faster and without a central team in the room. Read the strategy: [`specs/strategy.md`](specs/strategy.md).
