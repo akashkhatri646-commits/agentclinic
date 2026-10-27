@@ -139,3 +139,7 @@ With the app running on port 3100 and the database seeded (`npm run build`, then
 ## Stack
 
 Next.js 14 (App Router), TypeScript (strict), Prisma + SQLite, Auth.js, PicoCSS, Vitest. Runs fully locally with no external services.
+
+## Licence
+
+[MIT](LICENSE).
