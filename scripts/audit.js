@@ -49,10 +49,13 @@ const SPECIALIST_PAGES = [
   "/dashboard/triage?specialist=ticket-router",
 ]
 
+// An address that does not exist: every role should get the branded not-found page, not the framework default.
+const NOT_FOUND_PAGE = "/dashboard/no-such-page"
+
 const ROLES = {
   agent: {
     email: "agent@clinic.local",
-    pages: ["/dashboard/ailments", "/dashboard/ailments/new", "/dashboard/notifications", "/dashboard/profile"],
+    pages: ["/dashboard/ailments", "/dashboard/ailments/new", "/dashboard/notifications", "/dashboard/profile", NOT_FOUND_PAGE],
     detailLists: ["/dashboard/ailments"],
     forbidden: [
       "/dashboard/evals",
@@ -77,6 +80,7 @@ const ROLES = {
       "/dashboard/evals",
       "/dashboard/metrics",
       "/dashboard/triage",
+      NOT_FOUND_PAGE,
       ...SPECIALIST_PAGES,
     ],
     detailLists: ["/dashboard/ailments", "/dashboard/evals", "/dashboard/triage"],
@@ -91,6 +95,7 @@ const ROLES = {
       "/dashboard/evals",
       "/dashboard/metrics",
       "/dashboard/triage",
+      NOT_FOUND_PAGE,
       ...SPECIALIST_PAGES,
     ],
     detailLists: ["/dashboard/evals", "/dashboard/triage"],
@@ -169,6 +174,10 @@ async function main() {
             "const b=[...document.querySelectorAll('header button')].find(x=>x.textContent.trim()==='Sign out');" +
               "if(!b) return 0; const r=b.getBoundingClientRect(); return Math.max(0, Math.round(r.right - window.innerWidth))"
           )
+          if (page === NOT_FOUND_PAGE) {
+            const text = await driver.executeScript("return document.body.innerText")
+            if (!text.includes("Page not found")) accessFailures.push(`${role} at ${width}px: ${page} did not show the not-found page`)
+          }
           const violations = width === 1280 ? await runAxe(driver) : []
           const shot = await driver.takeScreenshot()
           const name = `${role}_${page.replace(/[^a-z0-9]+/gi, "_")}_${width}.png`
