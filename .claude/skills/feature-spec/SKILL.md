@@ -11,7 +11,7 @@ Turn the next roadmap phase into a branch plus a three-file spec, so implementat
 
 Read `specs/mission.md`, `specs/tech-stack.md`, and `specs/roadmap.md`. They set the values, constraints, and conventions the spec must respect (for example responsive breakpoints, test expectations, and where logic lives).
 
-Find the **next phase**: the first phase in `specs/roadmap.md` not marked complete. Roadmap markers can lag reality, so cross-check against existing `specs/YYYY-MM-DD-*` folders and `CHANGELOG.md`. If a phase looks built but unmarked, tell the user and ask whether to treat it as done.
+Find the **next phase**: the first phase in `specs/roadmap.md` not marked complete. Roadmap markers can lag reality, so cross-check against existing `specs/YYYY-MM-DD-*` folders and the local `CHANGELOG.md` if there is one. If a phase looks built but unmarked, tell the user and ask whether to treat it as done.
 
 If every phase is complete, say so and ask the user what to spec instead (a roadmap addition or a new idea). Don't invent a phase.
 

@@ -52,4 +52,4 @@
 - [ ] New migration committed; `init_all` migration untouched; `prisma/dev.db` not committed
 - [ ] Manual flows for agent, staff, and admin walked through
 - [ ] Responsive and axe checks done
-- [ ] `CHANGELOG.md` updated; Phase 6 marked `✓ Complete` in `specs/roadmap.md`
+- [ ] the local changelog updated; Phase 6 marked `✓ Complete` in `specs/roadmap.md`

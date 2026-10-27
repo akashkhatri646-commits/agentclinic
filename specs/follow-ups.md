@@ -114,7 +114,6 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 | Area | Issue | Impact | Suggested fix |
 |---|---|---|---|
 | Dependency advisories | `npm audit --omit=dev` reports advisories in Next.js 14.2.35 (denial of service via the image optimizer and server components, request smuggling in rewrites) and in the PostCSS copy bundled with it. The only fix npm offers is a major upgrade to Next 16 | The app is meant to run locally, does not use rewrites or remote images, and is not hardened for public exposure; a hosted deployment would need the upgrade first | Upgrade Next.js in its own phase, with the full test and audit suite, before any hosting |
-| Error pages | There is no custom `not-found` or `error` page, so an unknown address or an unexpected error shows the framework default | Works, but off-brand and without a way back to the dashboard | Add `not-found.tsx` and `error.tsx` with a link home |
 
 ## Design notes
 

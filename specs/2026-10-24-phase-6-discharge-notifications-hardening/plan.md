@@ -42,4 +42,4 @@
 7.1 Run `npm run lint` and fix all warnings and errors (configure ESLint via `next lint` if it prompts for setup)
 7.2 Run `npx axe-cli` against the dev server for login, dashboard, ailments list, ailment detail, appointments, therapies, notifications, admin users; resolve all WCAG 2.1 AA violations
 7.3 `npx tsc --noEmit`, `npm test`, `npm run build` all clean; note first-load JS for new routes
-7.4 Update `CHANGELOG.md` via the update-changelog skill and tick off Phase 6 in `specs/roadmap.md` when merged
+7.4 Update the local changelog via the update-changelog skill and tick off Phase 6 in `specs/roadmap.md` when merged

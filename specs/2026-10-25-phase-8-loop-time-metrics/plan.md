@@ -60,5 +60,5 @@ Goal: ready to merge.
 - [ ] 8.2 Extend `scripts/audit.js` with `/dashboard/metrics` for staff and admin and add it to the agent's forbidden pages; run it at 375 / 768 / 1280 px and resolve all violations
 - [ ] 8.3 Walk the manual flows in `validation.md` in a browser, not only over HTTP
 - [ ] 8.4 Verify with a screen reader or the accessibility tree that the chart has a meaningful label and the table is reachable
-- [ ] 8.5 Update `README.md`, `specs/strategy.md` status, `specs/follow-ups.md`, and `CHANGELOG.md`
+- [ ] 8.5 Update `README.md`, `specs/strategy.md` status, `specs/follow-ups.md`, and the local changelog
 - [ ] 8.6 Mark Phase 8 `✓ Complete` in `specs/roadmap.md` when merged

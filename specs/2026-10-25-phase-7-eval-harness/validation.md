@@ -66,4 +66,4 @@
 - [ ] New migration committed; earlier migrations untouched; `prisma/dev.db` and `.env*` not committed
 - [ ] Staff, admin, and agent flows walked through by hand
 - [ ] Responsive and axe checks done and the audit script committed under `scripts/`
-- [ ] `README.md`, `specs/strategy.md`, `specs/follow-ups.md`, and `CHANGELOG.md` updated; Phase 7 marked `✓ Complete` in `specs/roadmap.md`
+- [ ] `README.md`, `specs/strategy.md`, `specs/follow-ups.md`, and the local changelog updated; Phase 7 marked `✓ Complete` in `specs/roadmap.md`

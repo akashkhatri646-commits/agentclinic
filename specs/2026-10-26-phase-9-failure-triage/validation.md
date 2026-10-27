@@ -91,4 +91,4 @@
 - [ ] New migration committed; earlier migrations untouched; `prisma/dev.db` and `.env*` not committed
 - [ ] Staff, admin and agent flows, and the reappearance trigger, walked through by hand in a browser
 - [ ] Responsive and axe checks done with the committed audit script, which now covers the triage pages
-- [ ] The formula in `specs/strategy.md` corrected; `README.md`, `specs/follow-ups.md` and `CHANGELOG.md` updated; Phase 9 marked `✓ Complete` in `specs/roadmap.md`
+- [ ] The formula in `specs/strategy.md` corrected; `README.md`, `specs/follow-ups.md` and the local changelog updated; Phase 9 marked `✓ Complete` in `specs/roadmap.md`
