@@ -67,6 +67,6 @@ Goal: staff can start a run and read a clear verdict.
 Goal: ready to merge.
 - [ ] 9.1 `npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run build` all clean; note first-load JS for the new routes and confirm the SDK is not in any client bundle
 - [ ] 9.2 Commit the axe and responsive audit script under `scripts/` (the follow-up noted in `specs/follow-ups.md`), extend it to the new pages, and run it at 375 / 768 / 1280 px for staff and admin; resolve all WCAG 2.1 A and AA violations
-- [ ] 9.3 Walk the manual flows in `validation.md` by hand, not only over HTTP
+- [x] 9.3 Walk the manual flows in `validation.md` by hand, not only over HTTP
 - [ ] 9.4 Update `README.md` (Phase 7 built, how to run `npm run eval`), `specs/strategy.md` status, `specs/follow-ups.md` (remove the committed-audit-script note, add anything found), and the local changelog
 - [ ] 9.5 Mark Phase 7 `✓ Complete` in `specs/roadmap.md` when merged

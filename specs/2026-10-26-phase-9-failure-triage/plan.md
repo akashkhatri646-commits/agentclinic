@@ -68,6 +68,6 @@ Goal: staff actions, validated and recorded.
 ### 10. Quality pass and docs (R10)
 - [ ] 10.1 `npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run build` all clean; note first-load JS for the new routes
 - [ ] 10.2 Extend `scripts/audit.js` with the triage pages for staff and admin and add them to the agent's forbidden pages; run it at 375 / 768 / 1280 px and resolve every violation
-- [ ] 10.3 Walk the manual flows in `validation.md` in a browser, including the reappearance trigger (delete an unused therapy, re-run `v2`, then restore it with a reseed)
+- [x] 10.3 Walk the manual flows in `validation.md` in a browser, including the reappearance trigger (delete an unused therapy, re-run `v2`, then restore it with a reseed)
 - [ ] 10.4 Correct the formula in `specs/strategy.md` (× effort should read ÷ effort); update `README.md`, `specs/follow-ups.md` and the local changelog
 - [ ] 10.5 Mark Phase 9 `✓ Complete` in `specs/roadmap.md` when merged

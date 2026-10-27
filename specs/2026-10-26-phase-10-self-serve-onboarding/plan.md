@@ -92,5 +92,5 @@ Goal: teams can get a verdict without touching code.
 ### 13. Quality pass (R13, R14)
 - [x] 13.1 `npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run build` all clean; note first-load JS for the new routes
 - [x] 13.2 Run the audit script (all pages, and the triage and new pages filtered) at 375, 768 and 1280 px and resolve every violation, in lighter runs if memory is tight
-- [x] 13.3 Walk the manual flows in `validation.md` in a browser, including onboarding a specialist from a template to a verified fix, and the instance spread _(scripted in headless Chrome, not by hand: see the results in `validation.md`)_
+- [x] 13.3 Walk the manual flows in `validation.md` in a browser, including onboarding a specialist from a template to a verified fix, and the instance spread _(scripted in headless Chrome, then walked by hand in a browser: see the results in `validation.md`)_
 - [x] 13.4 Mark Phase 10 `✓ Complete` in `specs/roadmap.md` _(marked on the branch; the merge to `main` is still to do)_

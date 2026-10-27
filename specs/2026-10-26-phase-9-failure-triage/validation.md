@@ -23,34 +23,34 @@
 ## Manual flows
 
 ### Staff
-- [ ] The Triage page lists the backlog above, says which version and run it reflects, and shows summary counts that agree with the table (R3, R8)
-- [ ] Open a failure mode: it shows its score inputs and the formula; changing effort to L lowers its score and the ranking updates; setting a severity override changes the score; clearing the override returns to the suggestion (R3)
-- [ ] Add a fix to `frequency-vs-intensity` with an owner: it appears as proposed, an event is recorded with the actor, and the owner gets a notification (R4, R7)
-- [ ] Move that fix to in progress, then try to move it straight to verified: refused. Move it to shipped without choosing a version: refused. Choose `v2`: accepted (R4, R5)
-- [ ] The shipped fix reads "not yet verified" while the scenarios still fail, and the owner is not told it is verified (R5, R7)
-- [ ] Reassign a fix to another user: an event is recorded and the new owner is notified; assigning it to yourself sends no notification (R4, R7)
-- [ ] Run `v2` again: nothing that was verified changes, and the backlog numbers stay the same (R2, R5)
-- [ ] Run `v1` after `v2`: the failure modes' state does not change, because `v1` is not the latest evaluated version (R2)
+- [x] The Triage page lists the backlog above, says which version and run it reflects, and shows summary counts that agree with the table (R3, R8)
+- [x] Open a failure mode: it shows its score inputs and the formula; changing effort to L lowers its score and the ranking updates; setting a severity override changes the score; clearing the override returns to the suggestion (R3)
+- [x] Add a fix to `frequency-vs-intensity` with an owner: it appears as proposed, an event is recorded with the actor, and the owner gets a notification (R4, R7)
+- [x] Move that fix to in progress, then try to move it straight to verified: refused. Move it to shipped without choosing a version: refused. Choose `v2`: accepted (R4, R5)
+- [x] The shipped fix reads "not yet verified" while the scenarios still fail, and the owner is not told it is verified (R5, R7)
+- [x] Reassign a fix to another user: an event is recorded and the new owner is notified; assigning it to yourself sends no notification (R4, R7)
+- [x] Run `v2` again: nothing that was verified changes, and the backlog numbers stay the same (R2, R5)
+- [x] Run `v1` after `v2`: the failure modes' state does not change, because `v1` is not the latest evaluated version (R2)
 
 ### Reappearance (R6, R7)
-- [ ] Delete an unused therapy that the expectation scenarios depend on (Human Expectation Recalibration) from the Therapies page, then run `v2`
-- [ ] `expectation-gap` reopens with a "reappeared" flag, its frequency reflects the failing scenarios, and the owner of its verified fix is notified
-- [ ] Restore the data with a reseed and confirm the backlog returns to the state above
+- [x] Delete an unused therapy that the expectation scenarios depend on (Human Expectation Recalibration) from the Therapies page, then run `v2`
+- [x] `expectation-gap` reopens with a "reappeared" flag, its frequency reflects the failing scenarios, and the owner of its verified fix is notified
+- [x] Restore the data with a reseed and confirm the backlog returns to the state above
 
 ### Admin
-- [ ] Same access and abilities as staff (R8)
+- [x] Same access and abilities as staff (R8)
 
 ### Agent
-- [ ] The Triage link is not shown; visiting `/dashboard/triage` and `/dashboard/triage/<id>` directly redirects to a normal page with no triage content; calling each action directly is refused and changes nothing (R8)
+- [x] The Triage link is not shown; visiting `/dashboard/triage` and `/dashboard/triage/<id>` directly redirects to a normal page with no triage content; calling each action directly is refused and changes nothing (R8)
 
 ### Input handling (R4, R8)
-- [ ] A fix title that is empty or over 120 characters, an effort outside 1 to 3, an unknown version, and an owner who is an agent are each refused with a visible message
-- [ ] Text typed into a title or description containing markup is shown as plain text
-- [ ] A crafted `?error=` value shows no message; a known code shows its fixed message
-- [ ] An unknown failure mode id shows a not-found page
+- [x] A fix title that is empty or over 120 characters, an effort outside 1 to 3, an unknown version, and an owner who is an agent are each refused with a visible message
+- [x] Text typed into a title or description containing markup is shown as plain text
+- [x] A crafted `?error=` value shows no message; a known code shows its fixed message
+- [x] An unknown failure mode id shows a not-found page
 
 ### Resilience (R2)
-- [ ] Make the sync step fail (for example by temporarily renaming a table in a scratch database) and start a run: the run still completes and is stored, and an error is logged
+- [x] Make the sync step fail (for example by temporarily renaming a table in a scratch database) and start a run: the run still completes and is stored, and an error is logged
 
 ## Responsive checks (375, 768, 1280 px: no horizontal scroll, header and Sign out visible) (R10)
 - [ ] Backlog page, including the wide table inside its wrapper and the sample notice
@@ -89,6 +89,6 @@
 ## Merge checklist
 - [ ] All commands above pass on the branch `phase-9-failure-triage`
 - [ ] New migration committed; earlier migrations untouched; `prisma/dev.db` and `.env*` not committed
-- [ ] Staff, admin and agent flows, and the reappearance trigger, walked through by hand in a browser
+- [x] Staff, admin and agent flows, and the reappearance trigger, walked through by hand in a browser
 - [ ] Responsive and axe checks done with the committed audit script, which now covers the triage pages
 - [ ] The formula in `specs/strategy.md` corrected; `README.md`, `specs/follow-ups.md` and the local changelog updated; Phase 9 marked `✓ Complete` in `specs/roadmap.md`

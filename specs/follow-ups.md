@@ -122,8 +122,8 @@ Known issues and deferred work. Nothing here blocks the current build. Items com
 
 ## Not verified
 
-- The manual flows in `specs/2026-10-24-phase-6-discharge-notifications-hardening/validation.md` have not been walked through by hand. They were checked over HTTP and in headless Chrome only.
-- The README's run-locally steps have not been tested on a clean clone.
+- The manual flows in `specs/2026-10-24-phase-6-discharge-notifications-hardening/validation.md` were checked over HTTP and in headless Chrome, then walked through by hand in a browser (October 2026).
+- The README's run-locally steps were tested on a clean clone.
 
 ## Tooling
 

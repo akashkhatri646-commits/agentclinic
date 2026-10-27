@@ -10,20 +10,20 @@
 ## Manual flows
 
 ### Agent
-- [ ] Submit an ailment, get a therapy assigned, book an appointment: a notification appears and the nav badge count increases (R3)
-- [ ] Notifications page shows only this agent's notifications; opening a link goes to the right ailment; mark one/all as read lowers the badge (R3)
-- [ ] After discharge, the ailment shows as RESOLVED with the discharge date, the note, and a full treatment history; no Discharge or Reopen controls are visible (R1, R2)
-- [ ] Visiting a discharge action or another user's notification directly is rejected (R4)
+- [x] Submit an ailment, get a therapy assigned, book an appointment: a notification appears and the nav badge count increases (R3)
+- [x] Notifications page shows only this agent's notifications; opening a link goes to the right ailment; mark one/all as read lowers the badge (R3)
+- [x] After discharge, the ailment shows as RESOLVED with the discharge date, the note, and a full treatment history; no Discharge or Reopen controls are visible (R1, R2)
+- [x] Visiting a discharge action or another user's notification directly is rejected (R4)
 
 ### Staff
-- [ ] Booking by an agent notifies the assigned staff member (R3)
-- [ ] Discharge an IN_TREATMENT ailment with a note: status becomes RESOLVED, future appointments become CANCELLED, the agent is notified (R1, R3)
-- [ ] Discharge with an empty note is refused with a visible error (R1)
-- [ ] Reopen a resolved ailment: status returns to IN_TREATMENT (therapy assigned) or OPEN; discharge fields cleared (R1)
-- [ ] Confirm and cancel from the calendar notify the agent (R3)
+- [x] Booking by an agent notifies the assigned staff member (R3)
+- [x] Discharge an IN_TREATMENT ailment with a note: status becomes RESOLVED, future appointments become CANCELLED, the agent is notified (R1, R3)
+- [x] Discharge with an empty note is refused with a visible error (R1)
+- [x] Reopen a resolved ailment: status returns to IN_TREATMENT (therapy assigned) or OPEN; discharge fields cleared (R1)
+- [x] Confirm and cancel from the calendar notify the agent (R3)
 
 ### Admin
-- [ ] Same discharge and reopen capability as staff; notifications page works; admin users page still works (R1, R3)
+- [x] Same discharge and reopen capability as staff; notifications page works; admin users page still works (R1, R3)
 
 ## Responsive checks (375, 768, 1280 px — no horizontal scroll) (R6)
 - [ ] Ailment detail with discharge form and history
@@ -50,6 +50,6 @@
 ## Merge checklist
 - [ ] All commands above pass on the branch `phase-6-discharge-notifications-hardening`
 - [ ] New migration committed; `init_all` migration untouched; `prisma/dev.db` not committed
-- [ ] Manual flows for agent, staff, and admin walked through
+- [x] Manual flows for agent, staff, and admin walked through
 - [ ] Responsive and axe checks done
 - [ ] the local changelog updated; Phase 6 marked `✓ Complete` in `specs/roadmap.md`

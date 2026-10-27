@@ -13,22 +13,22 @@
 ## Manual flows
 
 ### Staff
-- [ ] Open the Evals page from the sidebar: the seeded `v1` and `v2` runs are listed with verdict, dev rate, and hold-out rate (R7)
-- [ ] Open the `v1` run: verdict reads FAIL with a stated reason; failures are grouped by category; each failed scenario shows expected versus actual and a reason (R4, R6)
-- [ ] Open the `v2` run: verdict reads PASS; the comparison with `v1` shows a positive delta, scenarios fixed, and any regressions (R6)
-- [ ] Start a new `v2` run from the page: a new row appears and the page opens its verdict (R3, R7)
-- [ ] Without an API key the "Use LLM judge" option is not offered (R5)
-- [ ] Delete or rename a therapy in the catalogue, run `v2` again: scenarios that depended on it fail with the "not in catalogue" reason, and the run does not crash (R4)
-- [ ] An unknown run id shows a not-found page (R6)
+- [x] Open the Evals page from the sidebar: the seeded `v1` and `v2` runs are listed with verdict, dev rate, and hold-out rate (R7)
+- [x] Open the `v1` run: verdict reads FAIL with a stated reason; failures are grouped by category; each failed scenario shows expected versus actual and a reason (R4, R6)
+- [x] Open the `v2` run: verdict reads PASS; the comparison with `v1` shows a positive delta, scenarios fixed, and any regressions (R6)
+- [x] Start a new `v2` run from the page: a new row appears and the page opens its verdict (R3, R7)
+- [x] Without an API key the "Use LLM judge" option is not offered (R5)
+- [x] Delete or rename a therapy in the catalogue, run `v2` again: scenarios that depended on it fail with the "not in catalogue" reason, and the run does not crash (R4)
+- [x] An unknown run id shows a not-found page (R6)
 
 ### Admin
-- [ ] Same access and abilities as staff; admin users page still works (R8)
+- [x] Same access and abilities as staff; admin users page still works (R8)
 
 ### Agent
-- [ ] The Evals link is not shown; visiting `/dashboard/evals` and `/dashboard/evals/<id>` directly redirects away; invoking `runEvalAction` directly is rejected and creates no run (R8)
+- [x] The Evals link is not shown; visiting `/dashboard/evals` and `/dashboard/evals/<id>` directly redirects away; invoking `runEvalAction` directly is rejected and creates no run (R8)
 
 ### Optional, with a key
-- [ ] With `ANTHROPIC_API_KEY` set, a run with the judge enabled records judge scores for scenarios that passed the checks; unplugging the network mid-run does not fail the run (R5)
+- [x] With `ANTHROPIC_API_KEY` set, a run with the judge enabled records judge scores for scenarios that passed the checks; unplugging the network mid-run does not fail the run (R5)
 
 ## Responsive checks (375, 768, 1280 px, no horizontal scroll) (R9)
 - [ ] Evals list page, including the empty state and the run form
@@ -64,6 +64,6 @@
 ## Merge checklist
 - [ ] All commands above pass on the branch `phase-7-eval-harness`
 - [ ] New migration committed; earlier migrations untouched; `prisma/dev.db` and `.env*` not committed
-- [ ] Staff, admin, and agent flows walked through by hand
+- [x] Staff, admin, and agent flows walked through by hand
 - [ ] Responsive and axe checks done and the audit script committed under `scripts/`
 - [ ] `README.md`, `specs/strategy.md`, `specs/follow-ups.md`, and the local changelog updated; Phase 7 marked `✓ Complete` in `specs/roadmap.md`

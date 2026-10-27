@@ -17,22 +17,22 @@
 ## Manual flows
 
 ### Staff
-- [ ] The staff dashboard shows the loop-time tile with the median, the target, a text status, the latest version's loop time and a working link to Metrics (R7)
-- [ ] The Metrics page shows the headline numbers above, the chart, and a per-version table with release date, waiting, running, loop time, pass rates, fixed and regressed (R2–R5, R7)
-- [ ] The sample-data notice is visible on the Metrics page and on the sample runs' pages and list rows (R6, R7)
-- [ ] Run `v2` from the Evals page: the new run is not marked sample, has changed `startedAt` and `finishedAt`, and does not change the loop-time median (a re-run is not a new loop) but does update `v2`'s pass rates if the result differs (R1, R2, R3)
-- [ ] Remove the sample runs from the database (or start from an empty database), run `v1`: its loop time is computed from the version's real release date (2026-10-25) to the new verdict, the page shows no sample notice, and with one version the chart shows points without a connecting line (R2, R5, R6)
-- [ ] An empty database shows the empty state, not a broken chart or a division by zero (R5)
-- [ ] A run with no change-shipped time is left out of loop time and counted in the "excluded" note (R1)
+- [x] The staff dashboard shows the loop-time tile with the median, the target, a text status, the latest version's loop time and a working link to Metrics (R7)
+- [x] The Metrics page shows the headline numbers above, the chart, and a per-version table with release date, waiting, running, loop time, pass rates, fixed and regressed (R2–R5, R7)
+- [x] The sample-data notice is visible on the Metrics page and on the sample runs' pages and list rows (R6, R7)
+- [x] Run `v2` from the Evals page: the new run is not marked sample, has changed `startedAt` and `finishedAt`, and does not change the loop-time median (a re-run is not a new loop) but does update `v2`'s pass rates if the result differs (R1, R2, R3)
+- [x] Remove the sample runs from the database (or start from an empty database), run `v1`: its loop time is computed from the version's real release date (2026-10-25) to the new verdict, the page shows no sample notice, and with one version the chart shows points without a connecting line (R2, R5, R6)
+- [x] An empty database shows the empty state, not a broken chart or a division by zero (R5)
+- [x] A run with no change-shipped time is left out of loop time and counted in the "excluded" note (R1)
 
 ### Admin
-- [ ] Same access and view as staff (R8)
+- [x] Same access and view as staff (R8)
 
 ### Agent
-- [ ] The Metrics link and the dashboard tile are not shown; visiting `/dashboard/metrics` directly redirects to a normal page with no metrics content (R8)
+- [x] The Metrics link and the dashboard tile are not shown; visiting `/dashboard/metrics` directly redirects to a normal page with no metrics content (R8)
 
 ### Resilience
-- [ ] Make the metrics query fail (for example by temporarily renaming a column in a scratch database): the staff dashboard still renders, without the tile, and an error is logged (R8)
+- [x] Make the metrics query fail (for example by temporarily renaming a column in a scratch database): the staff dashboard still renders, without the tile, and an error is logged (R8)
 
 ## Responsive checks (375, 768, 1280 px: no horizontal scroll, header and Sign out visible) (R9)
 - [ ] Metrics page: headline tiles stack cleanly, the chart scales without overflow, the table scrolls inside its wrapper
@@ -69,6 +69,6 @@
 ## Merge checklist
 - [ ] All commands above pass on the branch `phase-8-loop-time-metrics`
 - [ ] New migration committed; earlier migrations untouched; `prisma/dev.db` and `.env*` not committed
-- [ ] Staff, admin and agent flows walked through by hand in a browser
+- [x] Staff, admin and agent flows walked through by hand in a browser
 - [ ] Responsive and axe checks done with the committed audit script, which now covers the Metrics page
 - [ ] `README.md`, `specs/strategy.md`, `specs/follow-ups.md` and the local changelog updated; Phase 8 marked `✓ Complete` in `specs/roadmap.md`
